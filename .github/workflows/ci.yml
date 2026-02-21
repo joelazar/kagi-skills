@@ -54,7 +54,7 @@ jobs:
       - name: Build
         run: |
           cd ${{ matrix.skill }}
-          go build ./...
+          go build -o /dev/null ./...
 
       - name: Vet
         run: |

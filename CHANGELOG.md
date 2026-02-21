@@ -7,14 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- `--version` / `-v` flag for all four binaries, injected at build time via `-ldflags`
-- `Makefile` with `build`, `lint`, `test`, `fmt`, and `clean` targets
-- `LICENSE` (MIT)
-- `CHANGELOG.md` (this file)
-- Version embedded in release binary filenames (`skill_vX.Y.Z_os_arch`)
-- Checksum verification instructions in each `SKILL.md`
-- Full `go install` support via canonical module paths (`github.com/joelazar/kagi-skills/...`)
-- CI and release badges in `README.md`
+## [v1.0.0] - 2025-02-21
 
-[Unreleased]: https://github.com/joelazar/kagi-skills/compare/HEAD...HEAD
+### Added
+- Four CLI tools for Kagi APIs: `kagi-search`, `kagi-fastgpt`, `kagi-summarizer`, and `kagi-enrich`
+- Pre-built binaries for Linux (amd64/arm64), macOS (amd64/arm64), and Windows (amd64)
+- Auto-download wrapper scripts in each `SKILL.md` for seamless agent integration
+- `go install` support via canonical module paths
+- `--version` / `-v` flag for all binaries
+- CI workflow (lint, format, build) and automated release workflow
+- `Makefile` with `build`, `lint`, `test`, `fmt`, and `clean` targets
+- MIT license
+
+[Unreleased]: https://github.com/joelazar/kagi-skills/compare/v1.0.0...HEAD
+[v1.0.0]: https://github.com/joelazar/kagi-skills/releases/tag/v1.0.0
