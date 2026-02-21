@@ -74,10 +74,29 @@ if [[ "$needs_build" -eq 1 ]]; then
          exit 1 ;;
     esac
 
+    CHECKSUMS_URL="https://github.com/joelazar/kagi-skills/releases/download/${TAG}/checksums.txt"
+
     if command -v curl >/dev/null 2>&1; then
       curl -fsSL "$URL" -o "$BIN"
+      CHECKSUMS="$(curl -fsSL "$CHECKSUMS_URL")"
     else
       wget -qO "$BIN" "$URL"
+      CHECKSUMS="$(wget -qO- "$CHECKSUMS_URL")"
+    fi
+
+    EXPECTED="$(printf '%s\n' "$CHECKSUMS" | grep "$BINARY" | awk '{print $1}')"
+    if [[ -z "$EXPECTED" ]]; then
+      echo "Warning: Could not find checksum for $BINARY in checksums.txt. Skipping verification." >&2
+    else
+      ACTUAL="$(shasum -a 256 "$BIN" | awk '{print $1}')"
+      if [[ "$ACTUAL" != "$EXPECTED" ]]; then
+        echo "Error: Checksum mismatch for $BINARY!" >&2
+        echo "  Expected: $EXPECTED" >&2
+        echo "  Actual:   $ACTUAL" >&2
+        rm -f "$BIN"
+        exit 1
+      fi
+      echo "Checksum verified." >&2
     fi
 
     chmod +x "$BIN"
