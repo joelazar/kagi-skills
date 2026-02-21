@@ -32,7 +32,11 @@ Kagi's own research shows that **AI models perform up to 80% better when sourcin
 4. Export the key in your shell profile:
 
 ```bash
+# bash/zsh
 export KAGI_API_KEY="your-api-key-here"
+
+# fish
+set -Ux KAGI_API_KEY "your-api-key-here"
 ```
 
 One key works for all four tools.
@@ -54,7 +58,11 @@ Each skill folder contains a `SKILL.md` that agents read to understand how to in
 Default skills directory: `~/.agents/skills/`
 
 ```bash
+# bash/zsh
 for skill in kagi-*; do ln -s "$(pwd)/$skill" ~/.agents/skills/"$skill"; done
+
+# fish
+for skill in kagi-*; ln -s (pwd)/$skill ~/.agents/skills/$skill; end
 ```
 
 ### [Claude Code](https://github.com/anthropics/claude-code)
@@ -62,7 +70,11 @@ for skill in kagi-*; do ln -s "$(pwd)/$skill" ~/.agents/skills/"$skill"; done
 Default skills directory: `~/.claude/skills/`
 
 ```bash
+# bash/zsh
 for skill in kagi-*; do ln -s "$(pwd)/$skill" ~/.claude/skills/"$skill"; done
+
+# fish
+for skill in kagi-*; ln -s (pwd)/$skill ~/.claude/skills/$skill; end
 ```
 
 The binaries speak plain text and JSON (`--json` flag). No special integration is needed beyond dropping the skill folder in the right place.
