@@ -25,7 +25,13 @@ Requires a Kagi account with API access enabled. Uses the same `KAGI_API_KEY` as
 
 ## Pricing
 
-Token-based: **$1 per 1,000 tokens** processed. Cached requests are free.
+Token-based, billed per 1,000 tokens processed. Cached requests are free.
+
+| Plan | Price per 1k tokens |
+|------|---------------------|
+| Standard (Cecil / Agnes) | **$0.030** |
+| Kagi Ultimate subscribers | **$0.025** (automatically applied) |
+| Muriel (enterprise-grade) | higher — check [API pricing page](https://kagi.com/settings?p=api) |
 
 ## Usage
 

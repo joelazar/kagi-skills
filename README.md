@@ -11,22 +11,29 @@ Works with any agent that can call shell commands: [pi](https://github.com/mario
 
 ## Why Kagi?
 
-| | Kagi | Google / Bing / Brave / Tavily |
-|---|---|---|
-| **Privacy** | No ads, no tracking, no data selling | Ad-driven, user profiled |
-| **Result quality** | Curated, SEO-spam filtered | Algorithm subject to SEO gaming |
-| **Unique indexes** | Teclis (indie web) + TinyGem (alt news) | Not available |
-| **Summarizer API** | Built-in, URL + text | Not available |
-| **Pricing** | Pay-per-use, no surprise rate limits | Quota tiers, subscription traps |
+Kagi is a **user-funded search engine** — no ads, no data selling, no third parties. Because Kagi's revenue comes directly from users rather than advertisers, its results are optimized for relevance and quality instead of engagement and ad clicks. That alignment matters a lot when you're feeding search results into an AI agent.
+
+Kagi's own research shows that **AI models perform up to 80% better when sourcing data through Kagi Search** compared to ad-supported engines — cleaner signal, less SEO junk, more authoritative sources.
+
+|                    | Kagi                                                                 | Google / Bing / Brave / Tavily                |
+| ------------------ | -------------------------------------------------------------------- | --------------------------------------------- |
+| **Business model** | User-funded; you are the customer                                    | Ad-funded; you are the product                |
+| **Privacy**        | Zero telemetry, zero tracking, searches never linked to your account | Ad-driven, user profiled and tracked          |
+| **Result quality** | SEO-spam filtered, curated for relevance                             | Ranking influenced by ad spend and SEO gaming |
+| **Unique indexes** | Teclis (indie/small web) + TinyGem (alt-news)                        | Not available                                 |
+| **Summarizer API** | Built-in, works on any URL, PDF, or raw text                         | Not available                                 |
+| **Pricing**        | Pay-per-use, no rate-limit surprises                                 | Quota tiers, subscription traps               |
+
+Teclis and TinyGem are Kagi's own non-commercial crawl indexes. Teclis surfaces high-quality content from smaller, independent sites that commercial indexes deprioritize; TinyGem covers alternative and independent news sources. Together they make Kagi genuinely useful for research that goes beyond the mainstream web.
 
 ## Tools
 
-| Tool | What it does | Price |
-|---|---|---|
-| **kagi-search** | Web search + page content extraction | $0.025 / query |
-| **kagi-fastgpt** | AI answer synthesized from live web search | $0.015 / query |
-| **kagi-summarizer** | Summarize any URL, PDF, or text block | $1 / 1k tokens |
-| **kagi-enrich** | Search the independent web (Teclis) and alt-news (TinyGem) | $0.002 / query |
+| Tool                | What it does                                               | Price                                        |
+| ------------------- | ---------------------------------------------------------- | -------------------------------------------- |
+| **kagi-search**     | Web search + page content extraction                       | $0.025 / query                               |
+| **kagi-fastgpt**    | AI answer synthesized from live web search                 | $0.015 / query                               |
+| **kagi-summarizer** | Summarize any URL, PDF, or text block                      | $0.030 / 1k tokens ($0.025 on Ultimate plan) |
+| **kagi-enrich**     | Search the independent web (Teclis) and alt-news (TinyGem) | $0.002 / query                               |
 
 ## Get an API Key
 
@@ -70,4 +77,3 @@ ln -s $(pwd)/kagi-search ~/.claude/skills/kagi-search
 ```
 
 The binaries speak plain text and JSON (`--json` flag) — no special integration beyond dropping the skill folder in the right place.
-
