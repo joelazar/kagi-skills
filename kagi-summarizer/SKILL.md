@@ -37,30 +37,30 @@ Token-based, billed per 1,000 tokens processed. Cached requests are free.
 
 ```bash
 # Summarize a URL
-{baseDir}/kagi-summarizer https://example.com/article
+{baseDir}/kagi-summarizer.sh https://example.com/article
 
 # Summarize raw text
-{baseDir}/kagi-summarizer --text "Paste your article text here..."
+{baseDir}/kagi-summarizer.sh --text "Paste your article text here..."
 
 # Pipe text from stdin
 cat paper.txt | {baseDir}/kagi-summarizer
-echo "Long text..." | {baseDir}/kagi-summarizer --type takeaway
+echo "Long text..." | {baseDir}/kagi-summarizer.sh --type takeaway
 
 # Choose engine
-{baseDir}/kagi-summarizer https://arxiv.org/abs/1706.03762 --engine muriel
+{baseDir}/kagi-summarizer.sh https://arxiv.org/abs/1706.03762 --engine muriel
 
 # Get bullet-point takeaways instead of prose
-{baseDir}/kagi-summarizer https://example.com/article --type takeaway
+{baseDir}/kagi-summarizer.sh https://example.com/article --type takeaway
 
 # Translate summary to another language
-{baseDir}/kagi-summarizer https://example.com/article --lang DE
-{baseDir}/kagi-summarizer https://example.com/article --lang JA
+{baseDir}/kagi-summarizer.sh https://example.com/article --lang DE
+{baseDir}/kagi-summarizer.sh https://example.com/article --lang JA
 
 # JSON output
-{baseDir}/kagi-summarizer https://example.com/article --json
+{baseDir}/kagi-summarizer.sh https://example.com/article --json
 
 # Combined options
-{baseDir}/kagi-summarizer https://arxiv.org/abs/1706.03762 --engine muriel --type takeaway --lang EN --json
+{baseDir}/kagi-summarizer.sh https://arxiv.org/abs/1706.03762 --engine muriel --type takeaway --lang EN --json
 ```
 
 ### Options
@@ -165,6 +165,6 @@ Pre-built binaries are available for Linux and macOS (amd64 + arm64) and Windows
 cd {baseDir} && go build -o .bin/kagi-summarizer .
 ```
 
-Alternatively, just run `{baseDir}/kagi-summarizer` directly — the wrapper auto-builds on first run if Go is available.
+Alternatively, just run `{baseDir}/kagi-summarizer.sh` directly — the wrapper auto-builds on first run if Go is available.
 
 The binary has no external dependencies — only the Go standard library.

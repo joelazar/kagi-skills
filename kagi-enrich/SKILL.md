@@ -38,21 +38,21 @@ Requires a Kagi account with API access enabled. Uses the same `KAGI_API_KEY` as
 
 ```bash
 # Search the independent web (Teclis index) — default
-{baseDir}/kagi-enrich web "rust async programming"
-{baseDir}/kagi-enrich "rust async programming"        # web is the default
+{baseDir}/kagi-enrich.sh web "rust async programming"
+{baseDir}/kagi-enrich.sh "rust async programming"        # web is the default
 
 # Search non-mainstream news (TinyGem index)
-{baseDir}/kagi-enrich news "open source AI"
+{baseDir}/kagi-enrich.sh news "open source AI"
 
 # Limit number of results
-{baseDir}/kagi-enrich web "sqlite internals" -n 5
+{baseDir}/kagi-enrich.sh web "sqlite internals" -n 5
 
 # JSON output
-{baseDir}/kagi-enrich web "zig programming language" --json
-{baseDir}/kagi-enrich news "climate change solutions" --json
+{baseDir}/kagi-enrich.sh web "zig programming language" --json
+{baseDir}/kagi-enrich.sh news "climate change solutions" --json
 
 # Custom timeout
-{baseDir}/kagi-enrich web "query" --timeout 30
+{baseDir}/kagi-enrich.sh web "query" --timeout 30
 ```
 
 ### Options
@@ -148,6 +148,6 @@ Pre-built binaries are available for Linux and macOS (amd64 + arm64) and Windows
 cd {baseDir} && go build -o .bin/kagi-enrich .
 ```
 
-Alternatively, just run `{baseDir}/kagi-enrich` directly — the wrapper auto-builds on first run if Go is available.
+Alternatively, just run `{baseDir}/kagi-enrich.sh` directly — the wrapper auto-builds on first run if Go is available.
 
 The binary has no external dependencies — only the Go standard library.

@@ -56,7 +56,7 @@ Pre-built binaries are available for Linux and macOS (amd64 + arm64) and Windows
 cd {baseDir} && go build -o .bin/kagi-search .
 ```
 
-Alternatively, just run `{baseDir}/kagi-search` directly — the wrapper auto-builds on first run if Go is available.
+Alternatively, just run `{baseDir}/kagi-search.sh` directly — the wrapper auto-builds on first run if Go is available.
 
 ## Pricing
 
@@ -65,11 +65,11 @@ The Kagi Search API is priced at $25 for 1000 queries (2.5 cents per search).
 ## Search
 
 ```bash
-{baseDir}/kagi-search search "query"                              # Basic search (10 results)
-{baseDir}/kagi-search search "query" -n 20                        # More results (max 100)
-{baseDir}/kagi-search search "query" --content                    # Include extracted page content
-{baseDir}/kagi-search search "query" --json                       # JSON output
-{baseDir}/kagi-search search "query" -n 5 --content --json        # Combined options
+{baseDir}/kagi-search.sh search "query"                              # Basic search (10 results)
+{baseDir}/kagi-search.sh search "query" -n 20                        # More results (max 100)
+{baseDir}/kagi-search.sh search "query" --content                    # Include extracted page content
+{baseDir}/kagi-search.sh search "query" --json                       # JSON output
+{baseDir}/kagi-search.sh search "query" -n 5 --content --json        # Combined options
 ```
 
 ### Search options
@@ -83,8 +83,8 @@ The Kagi Search API is priced at $25 for 1000 queries (2.5 cents per search).
 ## Extract Page Content
 
 ```bash
-{baseDir}/kagi-search content https://example.com/article
-{baseDir}/kagi-search content https://example.com/article --json
+{baseDir}/kagi-search.sh content https://example.com/article
+{baseDir}/kagi-search.sh content https://example.com/article --json
 ```
 
 ### Content options

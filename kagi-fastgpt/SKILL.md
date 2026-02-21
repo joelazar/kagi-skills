@@ -30,11 +30,11 @@ Requires a Kagi account with API access enabled. Uses the same `KAGI_API_KEY` as
 ## Usage
 
 ```bash
-{baseDir}/kagi-fastgpt "query"                        # Ask a question (default)
-{baseDir}/kagi-fastgpt "query" --json                 # JSON output
-{baseDir}/kagi-fastgpt "query" --no-refs              # Answer only, no references
-{baseDir}/kagi-fastgpt "query" --no-cache             # Bypass response cache
-{baseDir}/kagi-fastgpt "query" --timeout 60           # Custom timeout (default: 30s)
+{baseDir}/kagi-fastgpt.sh "query"                        # Ask a question (default)
+{baseDir}/kagi-fastgpt.sh "query" --json                 # JSON output
+{baseDir}/kagi-fastgpt.sh "query" --no-refs              # Answer only, no references
+{baseDir}/kagi-fastgpt.sh "query" --no-cache             # Bypass response cache
+{baseDir}/kagi-fastgpt.sh "query" --timeout 60           # Custom timeout (default: 30s)
 ```
 
 ### Options
@@ -113,6 +113,6 @@ Pre-built binaries are available for Linux and macOS (amd64 + arm64) and Windows
 cd {baseDir} && go build -o .bin/kagi-fastgpt .
 ```
 
-Alternatively, just run `{baseDir}/kagi-fastgpt` directly — the wrapper auto-builds on first run if Go is available.
+Alternatively, just run `{baseDir}/kagi-fastgpt.sh` directly — the wrapper auto-builds on first run if Go is available.
 
 The binary has no external dependencies — only the Go standard library.
