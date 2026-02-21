@@ -7,7 +7,7 @@ description: Fast web search and content extraction via Kagi Search API. Uses a 
 
 Fast web search and content extraction using the official Kagi Search API.
 
-This skill now uses a Go backend (auto-built on first run) for faster startup and fewer dependency issues.
+This skill uses a Go binary for fast startup and no runtime dependencies. The binary can be downloaded pre-built or compiled from source.
 
 ## Setup
 
@@ -21,7 +21,35 @@ Requires a Kagi account with API access enabled.
    ```bash
    export KAGI_API_KEY="your-api-key-here"
    ```
-6. Ensure Go 1.26 is installed and available in `PATH` (https://go.dev/dl/)
+6. Install the binary — see [Installation](#installation) below
+
+## Installation
+
+### Option A — Download pre-built binary (no Go required)
+
+```bash
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m)
+case "$ARCH" in
+  x86_64)        ARCH="amd64" ;;
+  aarch64|arm64) ARCH="arm64" ;;
+esac
+
+mkdir -p {baseDir}/.bin
+curl -fsSL "https://github.com/joelazar/kagi-skills/releases/latest/download/kagi-search_${OS}_${ARCH}" \
+  -o {baseDir}/.bin/kagi-search
+chmod +x {baseDir}/.bin/kagi-search
+```
+
+Pre-built binaries are available for Linux and macOS (amd64 + arm64) and Windows (amd64).
+
+### Option B — Build from source (requires Go 1.26+)
+
+```bash
+cd {baseDir} && go build -o .bin/kagi-search .
+```
+
+Alternatively, just run `{baseDir}/kagi-search` directly — the wrapper auto-builds on first run if Go is available.
 
 ## Pricing
 
@@ -92,4 +120,4 @@ The Kagi Search API is priced at $25 for 1000 queries (2.5 cents per search).
 - Search results inherit your Kagi account settings (personalized results, blocked/promoted sites)
 - Results may include related search suggestions (`t:1` objects)
 - Content extraction uses `codeberg.org/readeck/go-readability/v2` (Readability v2)
-- The Go binary is cached under `{baseDir}/.bin/` and rebuilt automatically when source changes
+- The binary lives at `{baseDir}/.bin/kagi-search`; the wrapper rebuilds it automatically when source changes (requires Go)

@@ -14,7 +14,7 @@ Two indexes are available:
 | `web` | **Teclis** | Independent websites, personal blogs, open-source projects, non-commercial content |
 | `news` | **TinyGem** | Non-mainstream news sources, interesting discussions, off-the-beaten-path journalism |
 
-This skill uses a Go binary (auto-built on first run) for fast startup and zero runtime dependencies.
+This skill uses a Go binary for fast startup and zero runtime dependencies. The binary can be downloaded pre-built or compiled from source.
 
 ## Setup
 
@@ -28,7 +28,7 @@ Requires a Kagi account with API access enabled. Uses the same `KAGI_API_KEY` as
    ```bash
    export KAGI_API_KEY="your-api-key-here"
    ```
-6. Ensure Go 1.22+ is installed (https://go.dev/dl/)
+6. Install the binary — see [Installation](#installation) below
 
 ## Pricing
 
@@ -115,12 +115,32 @@ Date:  2023-04-01T00:00:00Z
 
 The enrichment indexes are intentionally niche — they may return fewer results than general search. No results for a query means no relevant content was found in that index (and you won't be billed).
 
-## Building from Source
+## Installation
 
-If the binary is missing or you want to rebuild:
+### Option A — Download pre-built binary (no Go required)
+
+```bash
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m)
+case "$ARCH" in
+  x86_64)        ARCH="amd64" ;;
+  aarch64|arm64) ARCH="arm64" ;;
+esac
+
+mkdir -p {baseDir}/.bin
+curl -fsSL "https://github.com/joelazar/kagi-skills/releases/latest/download/kagi-enrich_${OS}_${ARCH}" \
+  -o {baseDir}/.bin/kagi-enrich
+chmod +x {baseDir}/.bin/kagi-enrich
+```
+
+Pre-built binaries are available for Linux and macOS (amd64 + arm64) and Windows (amd64).
+
+### Option B — Build from source (requires Go 1.22+)
 
 ```bash
 cd {baseDir} && go build -o .bin/kagi-enrich .
 ```
+
+Alternatively, just run `{baseDir}/kagi-enrich` directly — the wrapper auto-builds on first run if Go is available.
 
 The binary has no external dependencies — only the Go standard library.

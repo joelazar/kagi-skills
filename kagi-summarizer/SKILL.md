@@ -7,7 +7,7 @@ description: Summarize any URL or text using Kagi's Universal Summarizer API. Su
 
 Summarize any URL or block of text using [Kagi's Universal Summarizer API](https://help.kagi.com/kagi/api/summarizer.html). Handles articles, papers, PDFs, video transcripts, forum threads, and more. Supports multiple summarization engines and can translate output to 28 languages.
 
-This skill uses a Go binary (auto-built on first run) for fast startup and zero runtime dependencies.
+This skill uses a Go binary for fast startup and zero runtime dependencies. The binary can be downloaded pre-built or compiled from source.
 
 ## Setup
 
@@ -21,7 +21,7 @@ Requires a Kagi account with API access enabled. Uses the same `KAGI_API_KEY` as
    ```bash
    export KAGI_API_KEY="your-api-key-here"
    ```
-6. Ensure Go 1.22+ is installed (https://go.dev/dl/)
+6. Install the binary — see [Installation](#installation) below
 
 ## Pricing
 
@@ -126,12 +126,32 @@ attention mechanisms, dispensing with recurrence and convolutions...
 - **Use kagi-fastgpt** instead when you have a question that requires synthesizing information from multiple sources via live web search
 - **Use kagi-search** instead when you need raw search results to scan or compare
 
-## Building from Source
+## Installation
 
-If the binary is missing or you want to rebuild:
+### Option A — Download pre-built binary (no Go required)
+
+```bash
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m)
+case "$ARCH" in
+  x86_64)        ARCH="amd64" ;;
+  aarch64|arm64) ARCH="arm64" ;;
+esac
+
+mkdir -p {baseDir}/.bin
+curl -fsSL "https://github.com/joelazar/kagi-skills/releases/latest/download/kagi-summarizer_${OS}_${ARCH}" \
+  -o {baseDir}/.bin/kagi-summarizer
+chmod +x {baseDir}/.bin/kagi-summarizer
+```
+
+Pre-built binaries are available for Linux and macOS (amd64 + arm64) and Windows (amd64).
+
+### Option B — Build from source (requires Go 1.22+)
 
 ```bash
 cd {baseDir} && go build -o .bin/kagi-summarizer .
 ```
+
+Alternatively, just run `{baseDir}/kagi-summarizer` directly — the wrapper auto-builds on first run if Go is available.
 
 The binary has no external dependencies — only the Go standard library.

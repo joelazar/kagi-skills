@@ -7,7 +7,7 @@ description: Ask questions and get AI-synthesized answers backed by live web sea
 
 Get AI-generated answers with cited web sources using [Kagi's FastGPT API](https://help.kagi.com/kagi/api/fastgpt.html). FastGPT runs a full web search under the hood and synthesizes results into a concise answer — ideal for factual questions, API lookups, and current-events queries.
 
-This skill uses a Go binary (auto-built on first run) for fast startup and no runtime dependencies.
+This skill uses a Go binary for fast startup and no runtime dependencies. The binary can be downloaded pre-built or compiled from source.
 
 ## Setup
 
@@ -21,7 +21,7 @@ Requires a Kagi account with API access enabled. Uses the same `KAGI_API_KEY` as
    ```bash
    export KAGI_API_KEY="your-api-key-here"
    ```
-6. Ensure Go 1.26+ is installed (https://go.dev/dl/)
+6. Install the binary — see [Installation](#installation) below
 
 ## Pricing
 
@@ -80,12 +80,32 @@ Returns a JSON object with:
 - **Use kagi-search** when you need raw search results to scan, compare, or extract data from yourself
 - **Use web-browser** when you need to interact with a page or the content is behind JavaScript
 
-## Building from Source
+## Installation
 
-If the binary is missing or you want to rebuild:
+### Option A — Download pre-built binary (no Go required)
+
+```bash
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m)
+case "$ARCH" in
+  x86_64)        ARCH="amd64" ;;
+  aarch64|arm64) ARCH="arm64" ;;
+esac
+
+mkdir -p {baseDir}/.bin
+curl -fsSL "https://github.com/joelazar/kagi-skills/releases/latest/download/kagi-fastgpt_${OS}_${ARCH}" \
+  -o {baseDir}/.bin/kagi-fastgpt
+chmod +x {baseDir}/.bin/kagi-fastgpt
+```
+
+Pre-built binaries are available for Linux and macOS (amd64 + arm64) and Windows (amd64).
+
+### Option B — Build from source (requires Go 1.26+)
 
 ```bash
 cd {baseDir} && go build -o .bin/kagi-fastgpt .
 ```
+
+Alternatively, just run `{baseDir}/kagi-fastgpt` directly — the wrapper auto-builds on first run if Go is available.
 
 The binary has no external dependencies — only the Go standard library.

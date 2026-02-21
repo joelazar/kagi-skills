@@ -3,7 +3,7 @@ set -euo pipefail
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN_DIR="$BASE_DIR/.bin"
-BIN="$BIN_DIR/kagi-fastgpt"
+BIN="$BIN_DIR/kagi-enrich"
 
 needs_build=0
 if [[ ! -x "$BIN" ]]; then
@@ -19,8 +19,8 @@ fi
 
 if [[ "$needs_build" -eq 1 ]]; then
   if ! command -v go >/dev/null 2>&1; then
-    echo "Error: kagi-fastgpt binary is missing and Go is not installed." >&2
-    echo "Either download a pre-built binary (see SKILL.md) or install Go 1.26+: https://go.dev/dl/" >&2
+    echo "Error: kagi-enrich binary is missing and Go is not installed." >&2
+    echo "Either download a pre-built binary (see SKILL.md) or install Go 1.22+: https://go.dev/dl/" >&2
     exit 1
   fi
 
@@ -30,8 +30,8 @@ if [[ "$needs_build" -eq 1 ]]; then
     GO_MAJOR="${GO_VERSION%%.*}"
     GO_REST="${GO_VERSION#*.}"
     GO_MINOR="${GO_REST%%.*}"
-    if [[ "$GO_MAJOR" -lt 1 || ( "$GO_MAJOR" -eq 1 && "$GO_MINOR" -lt 26 ) ]]; then
-      echo "Error: Go 1.26+ required, found go${GO_VERSION}" >&2
+    if [[ "$GO_MAJOR" -lt 1 || ( "$GO_MAJOR" -eq 1 && "$GO_MINOR" -lt 22 ) ]]; then
+      echo "Error: Go 1.22+ required, found go${GO_VERSION}" >&2
       exit 1
     fi
   fi
