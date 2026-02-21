@@ -135,7 +135,7 @@ chmod +x {baseDir}/.bin/kagi-enrich
 
 Pre-built binaries are available for Linux and macOS (amd64 + arm64) and Windows (amd64).
 
-### Option B — Build from source (requires Go 1.22+)
+### Option B — Build from source (requires Go 1.26+)
 
 ```bash
 cd {baseDir} && go build -o .bin/kagi-enrich .

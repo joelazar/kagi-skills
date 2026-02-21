@@ -18,29 +18,52 @@ else
 fi
 
 if [[ "$needs_build" -eq 1 ]]; then
-  if ! command -v go >/dev/null 2>&1; then
-    echo "Error: kagi-fastgpt binary is missing and Go is not installed." >&2
-    echo "Either download a pre-built binary (see SKILL.md) or install Go 1.26+: https://go.dev/dl/" >&2
-    exit 1
-  fi
+  mkdir -p "$BIN_DIR"
 
-  GO_VERSION="$(go env GOVERSION 2>/dev/null || true)"
-  if [[ -n "$GO_VERSION" ]]; then
-    GO_VERSION="${GO_VERSION#go}"
-    GO_MAJOR="${GO_VERSION%%.*}"
-    GO_REST="${GO_VERSION#*.}"
-    GO_MINOR="${GO_REST%%.*}"
-    if [[ "$GO_MAJOR" -lt 1 || ( "$GO_MAJOR" -eq 1 && "$GO_MINOR" -lt 26 ) ]]; then
-      echo "Error: Go 1.26+ required, found go${GO_VERSION}" >&2
-      exit 1
+  if command -v go >/dev/null 2>&1; then
+    GO_VERSION="$(go env GOVERSION 2>/dev/null || true)"
+    if [[ -n "$GO_VERSION" ]]; then
+      GO_VERSION="${GO_VERSION#go}"
+      GO_MAJOR="${GO_VERSION%%.*}"
+      GO_REST="${GO_VERSION#*.}"
+      GO_MINOR="${GO_REST%%.*}"
+      if [[ "$GO_MAJOR" -lt 1 || ( "$GO_MAJOR" -eq 1 && "$GO_MINOR" -lt 26 ) ]]; then
+        echo "Warning: Go 1.26+ required to build, found go${GO_VERSION}. Falling back to pre-built binary." >&2
+      else
+        echo "Building kagi-fastgpt from source..." >&2
+        (cd "$BASE_DIR" && go build -o "$BIN" .)
+      fi
     fi
   fi
 
-  mkdir -p "$BIN_DIR"
-  (
-    cd "$BASE_DIR"
-    go build -o "$BIN" .
-  )
+  if [[ ! -x "$BIN" ]]; then
+    OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+    ARCH="$(uname -m)"
+    case "$ARCH" in
+      x86_64)        ARCH="amd64" ;;
+      aarch64|arm64) ARCH="arm64" ;;
+    esac
+    URL="https://github.com/joelazar/kagi-skills/releases/latest/download/kagi-fastgpt_${OS}_${ARCH}"
+    echo "kagi-fastgpt binary not found. Download pre-built binary from GitHub releases?" >&2
+    echo "  $URL" >&2
+    read -r -p "Download? [Y/n] " reply >&2 </dev/tty
+    case "${reply:-Y}" in
+      [Yy]*|"") ;;
+      *) echo "Aborted. Install Go 1.26+ to build from source, or download manually:" >&2
+         echo "  $URL" >&2
+         exit 1 ;;
+    esac
+    if command -v curl >/dev/null 2>&1; then
+      curl -fsSL "$URL" -o "$BIN"
+    elif command -v wget >/dev/null 2>&1; then
+      wget -qO "$BIN" "$URL"
+    else
+      echo "Error: Neither curl nor wget found. Please download the binary manually:" >&2
+      echo "  $URL" >&2
+      exit 1
+    fi
+    chmod +x "$BIN"
+  fi
 fi
 
 exec "$BIN" "$@"
