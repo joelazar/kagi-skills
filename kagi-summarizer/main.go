@@ -273,7 +273,7 @@ func run(args []string) error {
 	return nil
 }
 
-func boolPtr(b bool) *bool { return &b }
+
 
 func callSummarizer(
 	client *http.Client,
@@ -288,7 +288,7 @@ func callSummarizer(
 		TargetLanguage: targetLang,
 	}
 	if !cache {
-		reqBody.Cache = boolPtr(false)
+		reqBody.Cache = new(bool)
 	}
 
 	bodyBytes, err := json.Marshal(reqBody)
