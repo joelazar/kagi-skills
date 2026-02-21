@@ -273,8 +273,6 @@ func run(args []string) error {
 	return nil
 }
 
-
-
 func callSummarizer(
 	client *http.Client,
 	apiKey, inputURL, inputText, engine, summType, targetLang string,
