@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -46,7 +47,7 @@ type outputJSON struct {
 	Tokens int     `json:"tokens"`
 	Engine string  `json:"engine,omitempty"`
 	Type   string  `json:"type,omitempty"`
-	Meta   apiMeta `json:"meta,omitempty"`
+	Meta   apiMeta `json:"meta"`
 }
 
 var validEngines = map[string]bool{
@@ -288,7 +289,7 @@ func callSummarizer(
 		return nil, err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, summarizerURL, bytes.NewReader(bodyBytes))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, summarizerURL, bytes.NewReader(bodyBytes))
 	if err != nil {
 		return nil, err
 	}

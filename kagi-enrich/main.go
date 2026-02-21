@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -52,7 +53,7 @@ type enrichResult struct {
 type enrichOutput struct {
 	Query   string         `json:"query"`
 	Index   string         `json:"index"`
-	Meta    apiMeta        `json:"meta,omitempty"`
+	Meta    apiMeta        `json:"meta"`
 	Results []enrichResult `json:"results"`
 }
 
@@ -249,7 +250,7 @@ func fetchEnrich(client *http.Client, apiKey, endpoint, query string) (*enrichRe
 	params := url.Values{}
 	params.Set("q", query)
 
-	req, err := http.NewRequest(http.MethodGet, endpoint+"?"+params.Encode(), nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, endpoint+"?"+params.Encode(), nil)
 	if err != nil {
 		return nil, err
 	}

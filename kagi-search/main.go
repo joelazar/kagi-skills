@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -63,7 +64,7 @@ type searchResult struct {
 
 type searchOutput struct {
 	Query           string         `json:"query"`
-	Meta            apiMeta        `json:"meta,omitempty"`
+	Meta            apiMeta        `json:"meta"`
 	Results         []searchResult `json:"results"`
 	RelatedSearches []string       `json:"related_searches,omitempty"`
 }
@@ -411,7 +412,11 @@ func printContentUsage() {
 }
 
 func newHTTPClient(timeout time.Duration) *http.Client {
-	transport := http.DefaultTransport.(*http.Transport).Clone()
+	t, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return &http.Client{Timeout: timeout}
+	}
+	transport := t.Clone()
 	transport.Proxy = http.ProxyFromEnvironment
 	transport.ForceAttemptHTTP2 = true
 	return &http.Client{
@@ -425,7 +430,7 @@ func fetchSearch(client *http.Client, apiKey, query string, limit int) (*kagiSea
 	params.Set("q", query)
 	params.Set("limit", strconv.Itoa(limit))
 
-	req, err := http.NewRequest(http.MethodGet, kagiSearchURL+"?"+params.Encode(), nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, kagiSearchURL+"?"+params.Encode(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -460,7 +465,7 @@ func fetchSearch(client *http.Client, apiKey, query string, limit int) (*kagiSea
 }
 
 func fetchPageContent(client *http.Client, targetURL string, maxChars int) (title string, content string, err error) {
-	req, err := http.NewRequest(http.MethodGet, targetURL, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, targetURL, nil)
 	if err != nil {
 		return "", "", err
 	}
@@ -485,21 +490,7 @@ func fetchPageContent(client *http.Client, targetURL string, maxChars int) (titl
 
 	htmlDoc := string(body)
 
-	if pageURL, parseErr := url.Parse(targetURL); parseErr == nil {
-		article, readErr := readability.FromReader(strings.NewReader(htmlDoc), pageURL)
-		if readErr == nil {
-			if articleTitle := cleanLine(article.Title()); articleTitle != "" {
-				title = articleTitle
-			}
-			var textBuilder strings.Builder
-			if renderErr := article.RenderText(&textBuilder); renderErr == nil {
-				if extracted := strings.TrimSpace(textBuilder.String()); extracted != "" {
-					content = extracted
-				}
-			}
-		}
-	}
-
+	title, content = tryReadability(htmlDoc, targetURL)
 	if title == "" {
 		title = extractTitle(htmlDoc)
 	}
@@ -515,6 +506,28 @@ func fetchPageContent(client *http.Client, targetURL string, maxChars int) (titl
 		content = truncateRunes(content, maxChars)
 	}
 	return title, content, nil
+}
+
+// tryReadability attempts to extract title and content using the readability
+// algorithm. Returns empty strings if parsing fails at any step.
+func tryReadability(htmlDoc, targetURL string) (title, content string) {
+	pageURL, err := url.Parse(targetURL)
+	if err != nil {
+		return
+	}
+	article, err := readability.FromReader(strings.NewReader(htmlDoc), pageURL)
+	if err != nil {
+		return
+	}
+	if t := cleanLine(article.Title()); t != "" {
+		title = t
+	}
+	var sb strings.Builder
+	if err := article.RenderText(&sb); err != nil {
+		return
+	}
+	content = strings.TrimSpace(sb.String())
+	return
 }
 
 func extractTitle(htmlDoc string) string {

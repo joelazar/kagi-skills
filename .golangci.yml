@@ -1,0 +1,87 @@
+version: "2"
+
+output:
+  show-stats: false
+
+linters:
+  default: all
+  disable:
+    - contextcheck
+    - cyclop
+    - err113
+    - exhaustruct
+    - forbidigo
+    - gochecknoglobals
+    - gocognit
+    - godot
+    - ireturn
+    - mnd
+    - nlreturn
+    - noinlineerr
+    - nonamedreturns
+    - paralleltest
+    - tagliatelle
+    - unqueryvet
+    - varnamelen
+    - wrapcheck
+    - wsl
+
+  settings:
+    revive:
+      rules:
+        - name: var-naming
+          disabled: true
+    depguard:
+      rules:
+        main:
+          deny:
+            - pkg: github.com/pkg/errors
+              desc: Should be replaced by standard lib errors package
+    funlen:
+      lines: 180
+      statements: 120
+      ignore-comments: true
+    lll:
+      line-length: 180
+    gocyclo:
+      min-complexity: 50
+    nestif:
+      min-complexity: 8
+    maintidx:
+      under: 15
+
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - dupl
+          - errcheck
+          - gocyclo
+          - gosec
+          - funlen
+        path: _test\.go
+      # G704 (SSRF) and G705 (XSS) are false positives for CLI tools that
+      # intentionally call known API endpoints and write status to stderr.
+      - linters:
+          - gosec
+        text: "G704|G705"
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

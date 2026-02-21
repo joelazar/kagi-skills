@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,15 +16,15 @@ import (
 const fastGPTURL = "https://kagi.com/api/v0/fastgpt"
 
 type fastGPTRequest struct {
-	Query    string `json:"query"`
-	Cache    bool   `json:"cache"`
-	WebSearch bool  `json:"web_search"`
+	Query     string `json:"query"`
+	Cache     bool   `json:"cache"`
+	WebSearch bool   `json:"web_search"`
 }
 
 type apiMeta struct {
-	ID   string   `json:"id,omitempty"`
-	Node string   `json:"node,omitempty"`
-	MS   int      `json:"ms,omitempty"`
+	ID         string   `json:"id,omitempty"`
+	Node       string   `json:"node,omitempty"`
+	MS         int      `json:"ms,omitempty"`
 	APIBalance *float64 `json:"api_balance,omitempty"`
 }
 
@@ -49,7 +50,7 @@ type outputJSON struct {
 	Output     string      `json:"output"`
 	Tokens     int         `json:"tokens"`
 	References []reference `json:"references,omitempty"`
-	Meta       apiMeta     `json:"meta,omitempty"`
+	Meta       apiMeta     `json:"meta"`
 }
 
 func main() {
@@ -187,8 +188,8 @@ func run(args []string) error {
 
 func callFastGPT(client *http.Client, apiKey, query string, cache bool) (*fastGPTResponse, error) {
 	reqBody := fastGPTRequest{
-		Query:    query,
-		Cache:    cache,
+		Query:     query,
+		Cache:     cache,
 		WebSearch: true, // web_search must be true per API docs
 	}
 
@@ -197,7 +198,7 @@ func callFastGPT(client *http.Client, apiKey, query string, cache bool) (*fastGP
 		return nil, err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, fastGPTURL, bytes.NewReader(bodyBytes))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, fastGPTURL, bytes.NewReader(bodyBytes))
 	if err != nil {
 		return nil, err
 	}
