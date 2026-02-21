@@ -1,4 +1,4 @@
-module kagi-search
+module github.com/joelazar/kagi-skills/kagi-search
 
 go 1.26
 

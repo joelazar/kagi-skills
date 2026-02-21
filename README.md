@@ -1,5 +1,10 @@
 # kagi-skills
 
+[![CI](https://github.com/joelazar/kagi-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/joelazar/kagi-skills/actions/workflows/ci.yml)
+[![Latest Release](https://img.shields.io/github/v/release/joelazar/kagi-skills)](https://github.com/joelazar/kagi-skills/releases/latest)
+[![Go Version](https://img.shields.io/badge/go-1.26+-blue)](https://go.dev/dl/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 CLI tools that give any AI agent access to [Kagi's](https://kagi.com) search and AI APIs — web search, AI-synthesized answers, page summarization, and independent-web enrichment.
 
 Works with any agent that can call shell commands: [pi](https://github.com/mariozechner/pi), [Claude Code](https://github.com/anthropics/claude-code), [Gemini CLI](https://github.com/google-gemini/gemini-cli), [Codex](https://github.com/openai/codex), [Cursor](https://cursor.com), or your own custom agent.

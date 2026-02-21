@@ -19,6 +19,8 @@ import (
 	readability "codeberg.org/readeck/go-readability/v2"
 )
 
+var version = "dev" // injected via -ldflags "-X main.version=..."
+
 const (
 	kagiSearchURL    = "https://kagi.com/api/v0/search"
 	defaultUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -94,6 +96,8 @@ func main() {
 
 	var err error
 	switch args[0] {
+	case "--version", "-v":
+		fmt.Printf("kagi-search %s\n", version)
 	case "search":
 		err = runSearch(args[1:])
 	case "content":

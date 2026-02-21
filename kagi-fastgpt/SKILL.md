@@ -92,10 +92,17 @@ case "$ARCH" in
   aarch64|arm64) ARCH="arm64" ;;
 esac
 
+TAG=$(curl -fsSL "https://api.github.com/repos/joelazar/kagi-skills/releases/latest" | grep '"tag_name"' | cut -d'"' -f4)
+BINARY="kagi-fastgpt_${TAG}_${OS}_${ARCH}"
+
 mkdir -p {baseDir}/.bin
-curl -fsSL "https://github.com/joelazar/kagi-skills/releases/latest/download/kagi-fastgpt_${OS}_${ARCH}" \
+curl -fsSL "https://github.com/joelazar/kagi-skills/releases/download/${TAG}/${BINARY}" \
   -o {baseDir}/.bin/kagi-fastgpt
 chmod +x {baseDir}/.bin/kagi-fastgpt
+
+# Verify checksum (recommended)
+curl -fsSL "https://github.com/joelazar/kagi-skills/releases/download/${TAG}/checksums.txt" | \
+  grep "${BINARY}" | sha256sum --check
 ```
 
 Pre-built binaries are available for Linux and macOS (amd64 + arm64) and Windows (amd64).

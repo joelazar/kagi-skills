@@ -42,9 +42,9 @@ jobs:
         run: |
           EXT=""
           if [ "$GOOS" = "windows" ]; then EXT=".exe"; fi
-          BINARY="${{ matrix.skill }}_${GOOS}_${GOARCH}${EXT}"
+          BINARY="${{ matrix.skill }}_${{ github.ref_name }}_${GOOS}_${GOARCH}${EXT}"
           cd ${{ matrix.skill }}
-          go build -ldflags="-s -w" -o "../dist/${BINARY}" .
+          go build -ldflags="-s -w -X main.version=${{ github.ref_name }}" -o "../dist/${BINARY}" .
           echo "Built: dist/${BINARY}"
 
       - name: Upload artifact

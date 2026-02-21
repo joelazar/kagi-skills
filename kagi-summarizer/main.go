@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+var version = "dev" // injected via -ldflags "-X main.version=..."
+
 const summarizerURL = "https://kagi.com/api/v0/summarize"
 
 type summarizeRequest struct {
@@ -71,6 +73,11 @@ func main() {
 			printUsage()
 			os.Exit(1)
 		}
+	}
+
+	if len(args) > 0 && (args[0] == "--version" || args[0] == "-v") {
+		fmt.Printf("kagi-summarizer %s\n", version)
+		return
 	}
 
 	if err := run(args); err != nil {

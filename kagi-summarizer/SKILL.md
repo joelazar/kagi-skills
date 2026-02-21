@@ -138,10 +138,17 @@ case "$ARCH" in
   aarch64|arm64) ARCH="arm64" ;;
 esac
 
+TAG=$(curl -fsSL "https://api.github.com/repos/joelazar/kagi-skills/releases/latest" | grep '"tag_name"' | cut -d'"' -f4)
+BINARY="kagi-summarizer_${TAG}_${OS}_${ARCH}"
+
 mkdir -p {baseDir}/.bin
-curl -fsSL "https://github.com/joelazar/kagi-skills/releases/latest/download/kagi-summarizer_${OS}_${ARCH}" \
+curl -fsSL "https://github.com/joelazar/kagi-skills/releases/download/${TAG}/${BINARY}" \
   -o {baseDir}/.bin/kagi-summarizer
 chmod +x {baseDir}/.bin/kagi-summarizer
+
+# Verify checksum (recommended)
+curl -fsSL "https://github.com/joelazar/kagi-skills/releases/download/${TAG}/checksums.txt" | \
+  grep "${BINARY}" | sha256sum --check
 ```
 
 Pre-built binaries are available for Linux and macOS (amd64 + arm64) and Windows (amd64).

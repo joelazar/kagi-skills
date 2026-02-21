@@ -16,6 +16,8 @@ import (
 	"time"
 )
 
+var version = "dev" // injected via -ldflags "-X main.version=..."
+
 const (
 	enrichWebURL  = "https://kagi.com/api/v0/enrich/web"
 	enrichNewsURL = "https://kagi.com/api/v0/enrich/news"
@@ -66,6 +68,8 @@ func main() {
 
 	var err error
 	switch args[0] {
+	case "--version", "-v":
+		fmt.Printf("kagi-enrich %s\n", version)
 	case "web":
 		err = runEnrich("web", args[1:])
 	case "news":

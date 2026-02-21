@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+var version = "dev" // injected via -ldflags "-X main.version=..."
+
 const fastGPTURL = "https://kagi.com/api/v0/fastgpt"
 
 type fastGPTRequest struct {
@@ -58,6 +60,11 @@ func main() {
 	if len(args) == 0 {
 		printUsage()
 		os.Exit(1)
+	}
+
+	if args[0] == "--version" || args[0] == "-v" {
+		fmt.Printf("kagi-fastgpt %s\n", version)
+		return
 	}
 
 	if err := run(args); err != nil {
