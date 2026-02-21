@@ -3,18 +3,24 @@ SKILLS := kagi-search kagi-fastgpt kagi-summarizer kagi-enrich
 .PHONY: build lint test fmt clean
 
 build:
-	@for s in $(SKILLS); do \
-		echo "=== $$s ===" && cd $$s && go build -o .bin/$$s . && cd ..; \
+	@set -e; \
+	for s in $(SKILLS); do \
+		echo "=== $$s ==="; \
+		(cd $$s && go build -o .bin/$$s .); \
 	done
 
 lint:
-	@for s in $(SKILLS); do \
-		echo "=== $$s ===" && (cd $$s && golangci-lint run --config ../.golangci.yml); \
+	@set -e; \
+	for s in $(SKILLS); do \
+		echo "=== $$s ==="; \
+		(cd $$s && golangci-lint run --config ../.golangci.yml); \
 	done
 
 test:
-	@for s in $(SKILLS); do \
-		echo "=== $$s ===" && (cd $$s && go test ./...); \
+	@set -e; \
+	for s in $(SKILLS); do \
+		echo "=== $$s ==="; \
+		(cd $$s && go test ./...); \
 	done
 
 fmt:

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -237,8 +238,9 @@ func runSearch(args []string) error {
 	}
 
 	if fetchContent {
+		contentClient := newSafeContentClient(client.Timeout)
 		for i := range out.Results {
-			title, content, fetchErr := fetchPageContent(client, out.Results[i].Link, maxContentChars)
+			title, content, fetchErr := fetchPageContent(contentClient, out.Results[i].Link, maxContentChars)
 			if out.Results[i].Title == "" && title != "" {
 				out.Results[i].Title = title
 			}
@@ -356,9 +358,11 @@ func runContent(args []string) error {
 	}
 
 	targetURL := strings.TrimSpace(positionals[0])
-	if _, err := url.ParseRequestURI(targetURL); err != nil {
-		return fmt.Errorf("invalid URL: %w", err)
+	parsedURL, err := validateRemoteFetchURL(targetURL)
+	if err != nil {
+		return err
 	}
+	targetURL = parsedURL.String()
 	if timeoutSec < 1 {
 		timeoutSec = 1
 	}
@@ -366,7 +370,7 @@ func runContent(args []string) error {
 		maxChars = 0
 	}
 
-	client := newHTTPClient(time.Duration(timeoutSec) * time.Second)
+	client := newSafeContentClient(time.Duration(timeoutSec) * time.Second)
 	title, content, err := fetchPageContent(client, targetURL, maxChars)
 
 	if jsonOut {
@@ -429,6 +433,112 @@ func newHTTPClient(timeout time.Duration) *http.Client {
 	}
 }
 
+func newSafeContentClient(timeout time.Duration) *http.Client {
+	var transport *http.Transport
+	if base, ok := http.DefaultTransport.(*http.Transport); ok {
+		transport = base.Clone()
+	} else {
+		transport = &http.Transport{}
+	}
+	// Security: ignore proxy env vars for untrusted URL fetches to avoid bypassing
+	// local-IP protections through a forward proxy.
+	transport.Proxy = nil
+	transport.ForceAttemptHTTP2 = true
+
+	dialer := &net.Dialer{Timeout: 15 * time.Second, KeepAlive: 30 * time.Second}
+	transport.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
+		host, port, err := net.SplitHostPort(address)
+		if err != nil {
+			return nil, err
+		}
+
+		if ip := net.ParseIP(host); ip != nil {
+			if isBlockedIP(ip) {
+				return nil, fmt.Errorf("blocked private or local IP address: %s", ip)
+			}
+			return dialer.DialContext(ctx, network, address)
+		}
+
+		ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+		if err != nil {
+			return nil, err
+		}
+
+		allowed := make([]string, 0, len(ips))
+		for _, ipAddr := range ips {
+			if !isBlockedIP(ipAddr.IP) {
+				allowed = append(allowed, ipAddr.IP.String())
+			}
+		}
+		if len(allowed) == 0 {
+			return nil, fmt.Errorf("blocked host %q: resolves to private or local IP", host)
+		}
+
+		var lastErr error
+		for _, ip := range allowed {
+			conn, err := dialer.DialContext(ctx, network, net.JoinHostPort(ip, port))
+			if err == nil {
+				return conn, nil
+			}
+			lastErr = err
+		}
+		if lastErr != nil {
+			return nil, lastErr
+		}
+		return nil, fmt.Errorf("failed to dial host %q", host)
+	}
+
+	client := &http.Client{
+		Timeout:   timeout,
+		Transport: transport,
+	}
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if len(via) >= 10 {
+			return errors.New("stopped after 10 redirects")
+		}
+		_, err := validateRemoteFetchURL(req.URL.String())
+		return err
+	}
+	return client
+}
+
+func validateRemoteFetchURL(rawURL string) (*url.URL, error) {
+	u, err := url.ParseRequestURI(strings.TrimSpace(rawURL))
+	if err != nil {
+		return nil, fmt.Errorf("invalid URL: %w", err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return nil, fmt.Errorf("invalid URL scheme %q (only http/https are allowed)", u.Scheme)
+	}
+	host := u.Hostname()
+	if host == "" {
+		return nil, errors.New("invalid URL: missing hostname")
+	}
+	if ip := net.ParseIP(host); ip != nil && isBlockedIP(ip) {
+		return nil, fmt.Errorf("blocked private or local IP address: %s", ip)
+	}
+	return u, nil
+}
+
+func isBlockedIP(ip net.IP) bool {
+	if ip == nil {
+		return true
+	}
+	if ip.IsLoopback() || ip.IsUnspecified() || ip.IsMulticast() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsPrivate() {
+		return true
+	}
+	if ip4 := ip.To4(); ip4 != nil {
+		// Shared/reserved IPv4 ranges that should never be fetched from untrusted input.
+		if ip4[0] == 0 || ip4[0] >= 224 {
+			return true
+		}
+		if ip4[0] == 100 && ip4[1] >= 64 && ip4[1] <= 127 {
+			return true // 100.64.0.0/10
+		}
+	}
+	return false
+}
+
 func fetchSearch(client *http.Client, apiKey, query string, limit int) (*kagiSearchResponse, error) {
 	params := url.Values{}
 	params.Set("q", query)
@@ -469,7 +579,12 @@ func fetchSearch(client *http.Client, apiKey, query string, limit int) (*kagiSea
 }
 
 func fetchPageContent(client *http.Client, targetURL string, maxChars int) (title string, content string, err error) {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, targetURL, nil)
+	parsedURL, err := validateRemoteFetchURL(targetURL)
+	if err != nil {
+		return "", "", err
+	}
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, parsedURL.String(), nil)
 	if err != nil {
 		return "", "", err
 	}
@@ -494,7 +609,7 @@ func fetchPageContent(client *http.Client, targetURL string, maxChars int) (titl
 
 	htmlDoc := string(body)
 
-	title, content = tryReadability(htmlDoc, targetURL)
+	title, content = tryReadability(htmlDoc, parsedURL.String())
 	if title == "" {
 		title = extractTitle(htmlDoc)
 	}
