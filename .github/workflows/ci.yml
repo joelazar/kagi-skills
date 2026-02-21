@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build ${{ matrix.skill }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        skill:
+          - kagi-search
+          - kagi-fastgpt
+          - kagi-summarizer
+          - kagi-enrich
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ${{ matrix.skill }}/go.mod
+          # go.sum only exists for modules with external deps (kagi-search).
+          # setup-go will auto-discover it; others get no cache, which is fine.
+          cache-dependency-path: '**/go.sum'
+
+      - name: Build
+        run: |
+          cd ${{ matrix.skill }}
+          go build ./...
+
+      - name: Vet
+        run: |
+          cd ${{ matrix.skill }}
+          go vet ./...
