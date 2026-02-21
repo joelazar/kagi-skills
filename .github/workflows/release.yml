@@ -60,6 +60,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -71,10 +73,35 @@ jobs:
           cd dist
           sha256sum * | tee checksums.txt
 
+      - name: Extract changelog for release
+        id: changelog
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          # Extract the section for this tag from CHANGELOG.md
+          # Matches from "## [vX.Y.Z]" until the next "## [" or end of file
+          NOTES=$(awk -v tag="$TAG" '
+            BEGIN { found=0 }
+            /^## \[/ {
+              if (found) exit
+              if (index($0, "[" tag "]")) { found=1; next }
+            }
+            found { print }
+          ' CHANGELOG.md)
+
+          if [ -z "$NOTES" ]; then
+            echo "WARNING: No changelog entry found for $TAG, falling back to auto-generated notes"
+            echo "fallback=true" >> "$GITHUB_OUTPUT"
+          else
+            # Write to file to preserve multiline content
+            echo "$NOTES" > release_notes.md
+            echo "fallback=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/*
-          generate_release_notes: true
+          body_path: ${{ steps.changelog.outputs.fallback == 'false' && 'release_notes.md' || '' }}
+          generate_release_notes: ${{ steps.changelog.outputs.fallback == 'true' }}
           fail_on_unmatched_files: true
