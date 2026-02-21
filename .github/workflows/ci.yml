@@ -56,15 +56,9 @@ jobs:
           cd ${{ matrix.skill }}
           go build -o /dev/null ./...
 
-      - name: Vet
-        run: |
-          cd ${{ matrix.skill }}
-          go vet ./...
-
       - name: Lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
-          version: latest
-          install-mode: goinstall
+          version: v2
           working-directory: ${{ matrix.skill }}
           args: --config ../.golangci.yml
