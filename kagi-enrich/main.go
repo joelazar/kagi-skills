@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -21,6 +22,9 @@ var version = "dev" // injected via -ldflags "-X main.version=..."
 const (
 	enrichWebURL  = "https://kagi.com/api/v0/enrich/web"
 	enrichNewsURL = "https://kagi.com/api/v0/enrich/news"
+	flagHelpShort = "-h"
+	flagHelpLong  = "--help"
+	flagJSON      = "--json"
 )
 
 type apiMeta struct {
@@ -59,6 +63,12 @@ type enrichOutput struct {
 	Results []enrichResult `json:"results"`
 }
 
+type balanceCache struct {
+	APIBalance float64 `json:"api_balance"`
+	UpdatedAt  string  `json:"updated_at"`
+	Source     string  `json:"source,omitempty"`
+}
+
 func main() {
 	args := os.Args[1:]
 	if len(args) == 0 {
@@ -74,7 +84,9 @@ func main() {
 		err = runEnrich("web", args[1:])
 	case "news":
 		err = runEnrich("news", args[1:])
-	case "-h", "--help":
+	case "balance":
+		err = runBalance(args[1:])
+	case flagHelpShort, flagHelpLong:
 		printGeneralUsage()
 	default:
 		// Convenience: no subcommand defaults to web
@@ -91,6 +103,7 @@ func printGeneralUsage() {
 	fmt.Println("Usage:")
 	fmt.Println("  kagi-enrich web  <query> [-n <num>] [--json]")
 	fmt.Println("  kagi-enrich news <query> [-n <num>] [--json]")
+	fmt.Println("  kagi-enrich balance [--json]")
 	fmt.Println()
 	fmt.Println("Indexes:")
 	fmt.Println("  web   Teclis — non-commercial, independent web content (default)")
@@ -106,6 +119,7 @@ func printIndexUsage(index string) {
 	fmt.Println("Options:")
 	fmt.Println("  -n <num>         Max number of results to display (default: all)")
 	fmt.Println("  --json           Emit JSON output")
+	fmt.Println("  --show-balance   Print API balance to stderr")
 	fmt.Println("  --timeout <sec>  HTTP timeout in seconds (default: 15)")
 	fmt.Println()
 	fmt.Println("Environment:")
@@ -115,13 +129,14 @@ func printIndexUsage(index string) {
 func runEnrich(index string, args []string) error {
 	limit := 0 // 0 = no limit (show all returned results)
 	jsonOut := false
+	showBalance := false
 	timeoutSec := 15
 
 	queryParts := make([]string, 0, len(args))
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		switch arg {
-		case "-h", "--help":
+		case flagHelpShort, flagHelpLong:
 			printIndexUsage(index)
 			return nil
 		case "--":
@@ -137,8 +152,10 @@ func runEnrich(index string, args []string) error {
 				return fmt.Errorf("invalid value for -n: %s", args[i])
 			}
 			limit = n
-		case "--json":
+		case flagJSON:
 			jsonOut = true
+		case "--show-balance":
+			showBalance = true
 		case "--timeout":
 			if i+1 >= len(args) {
 				return errors.New("missing value for --timeout")
@@ -178,6 +195,7 @@ func runEnrich(index string, args []string) error {
 	if err != nil {
 		return err
 	}
+	_ = saveBalanceCache(resp.Meta, "kagi-enrich")
 
 	// Build result list, filtering to type-0 items only
 	results := make([]enrichResult, 0, len(resp.Data))
@@ -222,7 +240,7 @@ func runEnrich(index string, args []string) error {
 
 	if len(results) == 0 {
 		fmt.Fprintln(os.Stderr, "No results found.")
-		if resp.Meta.APIBalance != nil {
+		if showBalance && resp.Meta.APIBalance != nil {
 			fmt.Fprintf(os.Stderr, "[API Balance: $%.4f]\n", *resp.Meta.APIBalance)
 		}
 		return nil
@@ -241,13 +259,55 @@ func runEnrich(index string, args []string) error {
 		fmt.Println()
 	}
 
-	if resp.Meta.APIBalance != nil {
+	if showBalance && resp.Meta.APIBalance != nil {
 		fmt.Fprintf(os.Stderr, "[API Balance: $%.4f | results: %d]\n", *resp.Meta.APIBalance, len(results))
-	} else {
-		fmt.Fprintf(os.Stderr, "[results: %d]\n", len(results))
 	}
 
 	return nil
+}
+
+func runBalance(args []string) error {
+	jsonOut := false
+
+	for i := range args {
+		switch args[i] {
+		case flagHelpShort, flagHelpLong:
+			printBalanceUsage()
+			return nil
+		case flagJSON:
+			jsonOut = true
+		default:
+			return fmt.Errorf("unknown option: %s", args[i])
+		}
+	}
+
+	cached, err := loadBalanceCache()
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return errors.New("no cached API balance yet; run a Kagi API command first")
+		}
+		return err
+	}
+
+	if jsonOut {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(cached)
+	}
+
+	fmt.Printf("API Balance: $%.4f\n", cached.APIBalance)
+	fmt.Printf("Updated: %s\n", cached.UpdatedAt)
+	if cached.Source != "" {
+		fmt.Printf("Source: %s\n", cached.Source)
+	}
+	return nil
+}
+
+func printBalanceUsage() {
+	fmt.Println("Usage: kagi-enrich balance [--json]")
+	fmt.Println()
+	fmt.Println("Options:")
+	fmt.Println("  --json           Emit JSON output")
 }
 
 func fetchEnrich(client *http.Client, apiKey, endpoint, query string) (*enrichResponse, error) {
@@ -295,4 +355,51 @@ func fetchEnrich(client *http.Client, apiKey, endpoint, query string) (*enrichRe
 	}
 
 	return &out, nil
+}
+
+func saveBalanceCache(meta apiMeta, source string) error {
+	if meta.APIBalance == nil {
+		return nil
+	}
+	path, err := balanceCachePath()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	cached := balanceCache{
+		APIBalance: *meta.APIBalance,
+		UpdatedAt:  time.Now().UTC().Format(time.RFC3339),
+		Source:     source,
+	}
+	payload, err := json.MarshalIndent(cached, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, payload, 0o600)
+}
+
+func loadBalanceCache() (balanceCache, error) {
+	path, err := balanceCachePath()
+	if err != nil {
+		return balanceCache{}, err
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return balanceCache{}, err
+	}
+	var out balanceCache
+	if err := json.Unmarshal(b, &out); err != nil {
+		return balanceCache{}, err
+	}
+	return out, nil
+}
+
+func balanceCachePath() (string, error) {
+	cacheDir, err := os.UserCacheDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(cacheDir, "kagi-skills", "api_balance.json"), nil
 }

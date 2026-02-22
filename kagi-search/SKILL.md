@@ -69,6 +69,7 @@ The Kagi Search API is priced at $25 for 1000 queries (2.5 cents per search).
 {baseDir}/kagi-search.sh search "query" -n 20                        # More results (max 100)
 {baseDir}/kagi-search.sh search "query" --content                    # Include extracted page content
 {baseDir}/kagi-search.sh search "query" --json                       # JSON output
+{baseDir}/kagi-search.sh search "query" --show-balance               # Show API balance for this call
 {baseDir}/kagi-search.sh search "query" -n 5 --content --json        # Combined options
 ```
 
@@ -77,6 +78,7 @@ The Kagi Search API is priced at $25 for 1000 queries (2.5 cents per search).
 - `-n <num>` - Number of results (default: 10, max: 100)
 - `--content` - Fetch and include page content for each result
 - `--json` - Emit JSON output
+- `--show-balance` - Print API balance to stderr for this call
 - `--timeout <sec>` - HTTP timeout in seconds (default: 15)
 - `--max-content-chars <num>` - Max chars per fetched result content (default: 5000)
 
@@ -92,6 +94,18 @@ The Kagi Search API is priced at $25 for 1000 queries (2.5 cents per search).
 - `--json` - Emit JSON output
 - `--timeout <sec>` - HTTP timeout in seconds (default: 20)
 - `--max-chars <num>` - Max chars to output (default: 20000)
+
+## API Balance
+
+Balance is not printed by default. You can either:
+
+- add `--show-balance` to `search`
+- run the dedicated command:
+
+```bash
+{baseDir}/kagi-search.sh balance
+{baseDir}/kagi-search.sh balance --json
+```
 
 ## Output
 

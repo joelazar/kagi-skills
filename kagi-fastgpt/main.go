@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -55,6 +56,12 @@ type outputJSON struct {
 	Meta       apiMeta     `json:"meta"`
 }
 
+type balanceCache struct {
+	APIBalance float64 `json:"api_balance"`
+	UpdatedAt  string  `json:"updated_at"`
+	Source     string  `json:"source,omitempty"`
+}
+
 func main() {
 	args := os.Args[1:]
 	if len(args) == 0 {
@@ -67,34 +74,44 @@ func main() {
 		return
 	}
 
-	if err := run(args); err != nil {
+	var err error
+	if args[0] == "balance" {
+		err = runBalance(args[1:])
+	} else {
+		err = run(args)
+	}
+	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error:", err)
 		os.Exit(1)
 	}
 }
 
 func printUsage() {
-	fmt.Println("Usage: fastgpt <query> [options]")
+	fmt.Println("Usage:")
+	fmt.Println("  kagi-fastgpt <query> [options]")
+	fmt.Println("  kagi-fastgpt balance [--json]")
 	fmt.Println()
 	fmt.Println("Options:")
 	fmt.Println("  --json              Emit JSON output")
 	fmt.Println("  --no-refs           Suppress references/sources in text output")
 	fmt.Println("  --no-cache          Bypass cached responses")
+	fmt.Println("  --show-balance      Print API balance to stderr")
 	fmt.Println("  --timeout <sec>     HTTP timeout in seconds (default: 30)")
 	fmt.Println()
 	fmt.Println("Environment:")
 	fmt.Println("  KAGI_API_KEY        Required. Your Kagi API key.")
 	fmt.Println()
 	fmt.Println("Examples:")
-	fmt.Println("  fastgpt \"What is the capital of France?\"")
-	fmt.Println("  fastgpt \"How does Go garbage collection work?\" --json")
-	fmt.Println("  fastgpt \"Latest Go release\" --no-cache")
+	fmt.Println("  kagi-fastgpt \"What is the capital of France?\"")
+	fmt.Println("  kagi-fastgpt \"How does Go garbage collection work?\" --json")
+	fmt.Println("  kagi-fastgpt \"Latest Go release\" --no-cache")
 }
 
 func run(args []string) error {
 	jsonOut := false
 	noRefs := false
 	noCache := false
+	showBalance := false
 	timeoutSec := 30
 
 	queryParts := make([]string, 0, len(args))
@@ -113,6 +130,8 @@ func run(args []string) error {
 			noRefs = true
 		case "--no-cache":
 			noCache = true
+		case "--show-balance":
+			showBalance = true
 		case "--timeout":
 			if i+1 >= len(args) {
 				return errors.New("missing value for --timeout")
@@ -152,6 +171,7 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
+	_ = saveBalanceCache(resp.Meta, "kagi-fastgpt")
 
 	if jsonOut {
 		out := outputJSON{
@@ -184,13 +204,57 @@ func run(args []string) error {
 		}
 	}
 
-	if resp.Meta.APIBalance != nil {
-		fmt.Fprintf(os.Stderr, "[API Balance: $%.2f | tokens: %d]\n", *resp.Meta.APIBalance, resp.Data.Tokens)
+	if showBalance && resp.Meta.APIBalance != nil {
+		fmt.Fprintf(os.Stderr, "[API Balance: $%.4f | tokens: %d]\n", *resp.Meta.APIBalance, resp.Data.Tokens)
 	} else {
 		fmt.Fprintf(os.Stderr, "[tokens: %d]\n", resp.Data.Tokens)
 	}
 
 	return nil
+}
+
+func runBalance(args []string) error {
+	jsonOut := false
+
+	for i := range args {
+		switch args[i] {
+		case "-h", "--help":
+			printBalanceUsage()
+			return nil
+		case "--json":
+			jsonOut = true
+		default:
+			return fmt.Errorf("unknown option: %s", args[i])
+		}
+	}
+
+	cached, err := loadBalanceCache()
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return errors.New("no cached API balance yet; run a Kagi API command first")
+		}
+		return err
+	}
+
+	if jsonOut {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(cached)
+	}
+
+	fmt.Printf("API Balance: $%.4f\n", cached.APIBalance)
+	fmt.Printf("Updated: %s\n", cached.UpdatedAt)
+	if cached.Source != "" {
+		fmt.Printf("Source: %s\n", cached.Source)
+	}
+	return nil
+}
+
+func printBalanceUsage() {
+	fmt.Println("Usage: kagi-fastgpt balance [--json]")
+	fmt.Println()
+	fmt.Println("Options:")
+	fmt.Println("  --json              Emit JSON output")
 }
 
 func callFastGPT(client *http.Client, apiKey, query string, cache bool) (*fastGPTResponse, error) {
@@ -252,4 +316,51 @@ func callFastGPT(client *http.Client, apiKey, query string, cache bool) (*fastGP
 	}
 
 	return &out, nil
+}
+
+func saveBalanceCache(meta apiMeta, source string) error {
+	if meta.APIBalance == nil {
+		return nil
+	}
+	path, err := balanceCachePath()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	cached := balanceCache{
+		APIBalance: *meta.APIBalance,
+		UpdatedAt:  time.Now().UTC().Format(time.RFC3339),
+		Source:     source,
+	}
+	payload, err := json.MarshalIndent(cached, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, payload, 0o600)
+}
+
+func loadBalanceCache() (balanceCache, error) {
+	path, err := balanceCachePath()
+	if err != nil {
+		return balanceCache{}, err
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return balanceCache{}, err
+	}
+	var out balanceCache
+	if err := json.Unmarshal(b, &out); err != nil {
+		return balanceCache{}, err
+	}
+	return out, nil
+}
+
+func balanceCachePath() (string, error) {
+	cacheDir, err := os.UserCacheDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(cacheDir, "kagi-skills", "api_balance.json"), nil
 }

@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -52,6 +53,12 @@ type outputJSON struct {
 	Meta   apiMeta `json:"meta"`
 }
 
+type balanceCache struct {
+	APIBalance float64 `json:"api_balance"`
+	UpdatedAt  string  `json:"updated_at"`
+	Source     string  `json:"source,omitempty"`
+}
+
 var validEngines = map[string]bool{
 	"cecil":  true,
 	"agnes":  true,
@@ -80,7 +87,13 @@ func main() {
 		return
 	}
 
-	if err := run(args); err != nil {
+	var err error
+	if len(args) > 0 && args[0] == "balance" {
+		err = runBalance(args[1:])
+	} else {
+		err = run(args)
+	}
+	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error:", err)
 		os.Exit(1)
 	}
@@ -90,6 +103,7 @@ func printUsage() {
 	fmt.Println("Usage: kagi-summarizer <url> [options]")
 	fmt.Println("       kagi-summarizer --text <text> [options]")
 	fmt.Println("       echo <text> | kagi-summarizer [options]")
+	fmt.Println("       kagi-summarizer balance [--json]")
 	fmt.Println()
 	fmt.Println("Options:")
 	fmt.Println("  --text <text>        Summarize raw text instead of a URL")
@@ -98,6 +112,7 @@ func printUsage() {
 	fmt.Println("  --lang <code>        Target language code (e.g. EN, DE, FR, JA)")
 	fmt.Println("  --json               Emit JSON output")
 	fmt.Println("  --no-cache           Bypass cached responses")
+	fmt.Println("  --show-balance       Print API balance to stderr")
 	fmt.Println("  --timeout <sec>      HTTP timeout in seconds (default: 120)")
 	fmt.Println()
 	fmt.Println("Engines:")
@@ -122,14 +137,15 @@ func printUsage() {
 
 func run(args []string) error {
 	var (
-		inputURL   string
-		inputText  string
-		engine     string
-		summType   string
-		targetLang string
-		jsonOut    bool
-		noCache    bool
-		timeoutSec = 120
+		inputURL    string
+		inputText   string
+		engine      string
+		summType    string
+		targetLang  string
+		jsonOut     bool
+		noCache     bool
+		showBalance bool
+		timeoutSec  = 120
 	)
 
 	positionals := make([]string, 0, len(args))
@@ -176,6 +192,8 @@ func run(args []string) error {
 			jsonOut = true
 		case "--no-cache":
 			noCache = true
+		case "--show-balance":
+			showBalance = true
 		case "--timeout":
 			if i+1 >= len(args) {
 				return errors.New("missing value for --timeout")
@@ -236,6 +254,7 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
+	_ = saveBalanceCache(resp.Meta, "kagi-summarizer")
 
 	// Determine the display label for input
 	inputLabel := inputURL
@@ -264,13 +283,57 @@ func run(args []string) error {
 
 	fmt.Println(resp.Data.Output)
 
-	if resp.Meta.APIBalance != nil {
+	if showBalance && resp.Meta.APIBalance != nil {
 		fmt.Fprintf(os.Stderr, "[API Balance: $%.4f | tokens: %d]\n", *resp.Meta.APIBalance, resp.Data.Tokens)
 	} else {
 		fmt.Fprintf(os.Stderr, "[tokens: %d]\n", resp.Data.Tokens)
 	}
 
 	return nil
+}
+
+func runBalance(args []string) error {
+	jsonOut := false
+
+	for i := range args {
+		switch args[i] {
+		case "-h", "--help":
+			printBalanceUsage()
+			return nil
+		case "--json":
+			jsonOut = true
+		default:
+			return fmt.Errorf("unknown option: %s", args[i])
+		}
+	}
+
+	cached, err := loadBalanceCache()
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return errors.New("no cached API balance yet; run a Kagi API command first")
+		}
+		return err
+	}
+
+	if jsonOut {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(cached)
+	}
+
+	fmt.Printf("API Balance: $%.4f\n", cached.APIBalance)
+	fmt.Printf("Updated: %s\n", cached.UpdatedAt)
+	if cached.Source != "" {
+		fmt.Printf("Source: %s\n", cached.Source)
+	}
+	return nil
+}
+
+func printBalanceUsage() {
+	fmt.Println("Usage: kagi-summarizer balance [--json]")
+	fmt.Println()
+	fmt.Println("Options:")
+	fmt.Println("  --json               Emit JSON output")
 }
 
 func callSummarizer(
@@ -340,4 +403,51 @@ func callSummarizer(
 	}
 
 	return &out, nil
+}
+
+func saveBalanceCache(meta apiMeta, source string) error {
+	if meta.APIBalance == nil {
+		return nil
+	}
+	path, err := balanceCachePath()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	cached := balanceCache{
+		APIBalance: *meta.APIBalance,
+		UpdatedAt:  time.Now().UTC().Format(time.RFC3339),
+		Source:     source,
+	}
+	payload, err := json.MarshalIndent(cached, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, payload, 0o600)
+}
+
+func loadBalanceCache() (balanceCache, error) {
+	path, err := balanceCachePath()
+	if err != nil {
+		return balanceCache{}, err
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return balanceCache{}, err
+	}
+	var out balanceCache
+	if err := json.Unmarshal(b, &out); err != nil {
+		return balanceCache{}, err
+	}
+	return out, nil
+}
+
+func balanceCachePath() (string, error) {
+	cacheDir, err := os.UserCacheDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(cacheDir, "kagi-skills", "api_balance.json"), nil
 }

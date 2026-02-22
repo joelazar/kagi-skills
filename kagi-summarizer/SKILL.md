@@ -59,6 +59,10 @@ echo "Long text..." | {baseDir}/kagi-summarizer.sh --type takeaway
 # JSON output
 {baseDir}/kagi-summarizer.sh https://example.com/article --json
 
+# Show balance only when needed
+{baseDir}/kagi-summarizer.sh https://example.com/article --show-balance
+{baseDir}/kagi-summarizer.sh balance
+
 # Combined options
 {baseDir}/kagi-summarizer.sh https://arxiv.org/abs/1706.03762 --engine muriel --type takeaway --lang EN --json
 ```
@@ -73,6 +77,7 @@ echo "Long text..." | {baseDir}/kagi-summarizer.sh --type takeaway
 | `--lang <code>` | Translate output to a language code (e.g. `EN`, `DE`, `FR`, `JA`) |
 | `--json` | Emit JSON output |
 | `--no-cache` | Bypass cached responses |
+| `--show-balance` | Print API balance to stderr for this call |
 | `--timeout <sec>` | HTTP timeout in seconds (default: 120) |
 
 ### Engines
@@ -95,14 +100,21 @@ If no language is specified, the output language follows the document's own lang
 
 ### Default (text)
 
-Prints the summary to stdout. Token usage and API balance are printed to stderr:
+Prints the summary to stdout. Token usage is printed to stderr. API balance is shown only with `--show-balance`:
 
 ```
 The paper "Attention Is All You Need" introduces the Transformer architecture,
 a novel approach to sequence transduction tasks that relies entirely on
 attention mechanisms, dispensing with recurrence and convolutions...
 
-[API Balance: $9.9800 | tokens: 1243]
+[tokens: 1243]
+```
+
+You can check balance separately:
+
+```bash
+{baseDir}/kagi-summarizer.sh balance
+{baseDir}/kagi-summarizer.sh balance --json
 ```
 
 ### JSON (`--json`)

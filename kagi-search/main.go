@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -25,6 +26,9 @@ var version = "dev" // injected via -ldflags "-X main.version=..."
 const (
 	kagiSearchURL    = "https://kagi.com/api/v0/search"
 	defaultUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+	flagHelpShort    = "-h"
+	flagHelpLong     = "--help"
+	flagJSON         = "--json"
 )
 
 type apiMeta struct {
@@ -79,6 +83,12 @@ type contentOutput struct {
 	Error   string `json:"error,omitempty"`
 }
 
+type balanceCache struct {
+	APIBalance float64 `json:"api_balance"`
+	UpdatedAt  string  `json:"updated_at"`
+	Source     string  `json:"source,omitempty"`
+}
+
 var (
 	reComments = regexp.MustCompile(`(?is)<!--.*?-->`)
 	reNoise    = regexp.MustCompile(`(?is)<(?:script|style|noscript|svg|iframe|nav|header|footer|aside)[^>]*>.*?</(?:script|style|noscript|svg|iframe|nav|header|footer|aside)>`)
@@ -103,6 +113,8 @@ func main() {
 		err = runSearch(args[1:])
 	case "content":
 		err = runContent(args[1:])
+	case "balance":
+		err = runBalance(args[1:])
 	default:
 		// Convenience: allow calling binary directly without subcommand.
 		err = runSearch(args)
@@ -118,12 +130,14 @@ func printGeneralUsage() {
 	fmt.Println("Usage:")
 	fmt.Println("  kagi-search search <query> [-n <num>] [--content] [--json]")
 	fmt.Println("  kagi-search content <url> [--json]")
+	fmt.Println("  kagi-search balance [--json]")
 }
 
 func runSearch(args []string) error {
 	limit := 10
 	fetchContent := false
 	jsonOut := false
+	showBalance := false
 	timeoutSec := 15
 	maxContentChars := 5000
 
@@ -131,7 +145,7 @@ func runSearch(args []string) error {
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		switch arg {
-		case "-h", "--help":
+		case flagHelpShort, flagHelpLong:
 			printSearchUsage()
 			return nil
 		case "--":
@@ -151,8 +165,10 @@ func runSearch(args []string) error {
 			limit = n
 		case "--content":
 			fetchContent = true
-		case "--json":
+		case flagJSON:
 			jsonOut = true
+		case "--show-balance":
+			showBalance = true
 		case "--timeout":
 			if i+1 >= len(args) {
 				printSearchUsage()
@@ -215,6 +231,7 @@ func runSearch(args []string) error {
 	if err != nil {
 		return err
 	}
+	_ = saveBalanceCache(resp.Meta, "kagi-search")
 
 	out := searchOutput{
 		Query:   query,
@@ -258,8 +275,8 @@ func runSearch(args []string) error {
 
 	if len(out.Results) == 0 {
 		fmt.Fprintln(os.Stderr, "No results found.")
-		if out.Meta.APIBalance != nil {
-			fmt.Fprintf(os.Stderr, "[API Balance: $%.2f]\n", *out.Meta.APIBalance)
+		if showBalance && out.Meta.APIBalance != nil {
+			fmt.Fprintf(os.Stderr, "[API Balance: $%.4f]\n", *out.Meta.APIBalance)
 		}
 		return nil
 	}
@@ -282,17 +299,10 @@ func runSearch(args []string) error {
 		fmt.Println()
 	}
 
-	if len(out.RelatedSearches) > 0 {
-		sorted := append([]string(nil), out.RelatedSearches...)
-		sort.Strings(sorted)
-		fmt.Println("--- Related Searches ---")
-		for _, term := range sorted {
-			fmt.Printf("- %s\n", term)
-		}
-	}
+	printRelatedSearches(out.RelatedSearches)
 
-	if out.Meta.APIBalance != nil {
-		fmt.Fprintf(os.Stderr, "[API Balance: $%.2f]\n", *out.Meta.APIBalance)
+	if showBalance && out.Meta.APIBalance != nil {
+		fmt.Fprintf(os.Stderr, "[API Balance: $%.4f]\n", *out.Meta.APIBalance)
 	}
 
 	return nil
@@ -307,13 +317,13 @@ func runContent(args []string) error {
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		switch arg {
-		case "-h", "--help":
+		case flagHelpShort, flagHelpLong:
 			printContentUsage()
 			return nil
 		case "--":
 			positionals = append(positionals, args[i+1:]...)
 			i = len(args)
-		case "--json":
+		case flagJSON:
 			jsonOut = true
 		case "--timeout":
 			if i+1 >= len(args) {
@@ -396,6 +406,53 @@ func runContent(args []string) error {
 	return nil
 }
 
+func runBalance(args []string) error {
+	jsonOut := false
+
+	for i := range args {
+		switch args[i] {
+		case flagHelpShort, flagHelpLong:
+			printBalanceUsage()
+			return nil
+		case flagJSON:
+			jsonOut = true
+		default:
+			return fmt.Errorf("unknown option: %s", args[i])
+		}
+	}
+
+	cached, err := loadBalanceCache()
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return errors.New("no cached API balance yet; run a Kagi API command first")
+		}
+		return err
+	}
+
+	if jsonOut {
+		return writeJSON(cached)
+	}
+
+	fmt.Printf("API Balance: $%.4f\n", cached.APIBalance)
+	fmt.Printf("Updated: %s\n", cached.UpdatedAt)
+	if cached.Source != "" {
+		fmt.Printf("Source: %s\n", cached.Source)
+	}
+	return nil
+}
+
+func printRelatedSearches(terms []string) {
+	if len(terms) == 0 {
+		return
+	}
+	sorted := append([]string(nil), terms...)
+	sort.Strings(sorted)
+	fmt.Println("--- Related Searches ---")
+	for _, term := range sorted {
+		fmt.Printf("- %s\n", term)
+	}
+}
+
 func printSearchUsage() {
 	fmt.Println("Usage: kagi-search search <query> [-n <num>] [--content] [--json]")
 	fmt.Println()
@@ -403,6 +460,7 @@ func printSearchUsage() {
 	fmt.Println("  -n <num>              Number of results (default: 10, max: 100)")
 	fmt.Println("  --content             Fetch readable page content")
 	fmt.Println("  --json                Emit JSON output")
+	fmt.Println("  --show-balance        Print API balance to stderr")
 	fmt.Println("  --timeout <sec>       HTTP timeout in seconds (default: 15)")
 	fmt.Println("  --max-content-chars   Max chars per fetched content (default: 5000)")
 	fmt.Println()
@@ -417,6 +475,13 @@ func printContentUsage() {
 	fmt.Println("  --json                Emit JSON output")
 	fmt.Println("  --timeout <sec>       HTTP timeout in seconds (default: 20)")
 	fmt.Println("  --max-chars <num>     Max chars to output (default: 20000)")
+}
+
+func printBalanceUsage() {
+	fmt.Println("Usage: kagi-search balance [--json]")
+	fmt.Println()
+	fmt.Println("Options:")
+	fmt.Println("  --json                Emit JSON output")
 }
 
 func newHTTPClient(timeout time.Duration) *http.Client {
@@ -699,6 +764,53 @@ func truncateRunes(s string, limit int) string {
 		return s
 	}
 	return string(r[:limit])
+}
+
+func saveBalanceCache(meta apiMeta, source string) error {
+	if meta.APIBalance == nil {
+		return nil
+	}
+	path, err := balanceCachePath()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	cached := balanceCache{
+		APIBalance: *meta.APIBalance,
+		UpdatedAt:  time.Now().UTC().Format(time.RFC3339),
+		Source:     source,
+	}
+	payload, err := json.MarshalIndent(cached, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, payload, 0o600)
+}
+
+func loadBalanceCache() (balanceCache, error) {
+	path, err := balanceCachePath()
+	if err != nil {
+		return balanceCache{}, err
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return balanceCache{}, err
+	}
+	var out balanceCache
+	if err := json.Unmarshal(b, &out); err != nil {
+		return balanceCache{}, err
+	}
+	return out, nil
+}
+
+func balanceCachePath() (string, error) {
+	cacheDir, err := os.UserCacheDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(cacheDir, "kagi-skills", "api_balance.json"), nil
 }
 
 func writeJSON(v any) error {

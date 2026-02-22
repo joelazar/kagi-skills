@@ -51,6 +51,10 @@ Requires a Kagi account with API access enabled. Uses the same `KAGI_API_KEY` as
 {baseDir}/kagi-enrich.sh web "zig programming language" --json
 {baseDir}/kagi-enrich.sh news "climate change solutions" --json
 
+# Show balance only when needed
+{baseDir}/kagi-enrich.sh web "query" --show-balance
+{baseDir}/kagi-enrich.sh balance
+
 # Custom timeout
 {baseDir}/kagi-enrich.sh web "query" --timeout 30
 ```
@@ -61,6 +65,7 @@ Requires a Kagi account with API access enabled. Uses the same `KAGI_API_KEY` as
 |------|-------------|
 | `-n <num>` | Max results to display (default: all returned) |
 | `--json` | Emit JSON output |
+| `--show-balance` | Print API balance to stderr for this call |
 | `--timeout <sec>` | HTTP timeout in seconds (default: 15) |
 
 ## Output
@@ -76,8 +81,13 @@ Date:  2023-04-01T00:00:00Z
 
 --- Result 2 ---
 ...
+```
 
-[API Balance: $9.9980 | results: 15]
+Balance is not printed by default. Use `--show-balance` on a query or run `balance` separately:
+
+```bash
+{baseDir}/kagi-enrich.sh balance
+{baseDir}/kagi-enrich.sh balance --json
 ```
 
 ### JSON (`--json`)

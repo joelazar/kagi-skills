@@ -34,6 +34,8 @@ Requires a Kagi account with API access enabled. Uses the same `KAGI_API_KEY` as
 {baseDir}/kagi-fastgpt.sh "query" --json                 # JSON output
 {baseDir}/kagi-fastgpt.sh "query" --no-refs              # Answer only, no references
 {baseDir}/kagi-fastgpt.sh "query" --no-cache             # Bypass response cache
+{baseDir}/kagi-fastgpt.sh "query" --show-balance         # Show API balance for this call
+{baseDir}/kagi-fastgpt.sh balance                          # Show last cached API balance
 {baseDir}/kagi-fastgpt.sh "query" --timeout 60           # Custom timeout (default: 30s)
 ```
 
@@ -44,6 +46,7 @@ Requires a Kagi account with API access enabled. Uses the same `KAGI_API_KEY` as
 | `--json` | Emit JSON output (see below) |
 | `--no-refs` | Suppress references in text output |
 | `--no-cache` | Bypass cached responses (use for time-sensitive queries) |
+| `--show-balance` | Print API balance to stderr for this call |
 | `--timeout <sec>` | HTTP timeout in seconds (default: 30) |
 
 ## Output
@@ -62,7 +65,14 @@ Python 3.11 was released on October 24, 2022 and introduced several improvements
 [2] ...
 ```
 
-Token usage and API balance are printed to stderr.
+Token usage is printed to stderr. API balance is only shown when you pass `--show-balance`.
+
+To check balance separately without cluttering every response:
+
+```bash
+{baseDir}/kagi-fastgpt.sh balance
+{baseDir}/kagi-fastgpt.sh balance --json
+```
 
 ### JSON (`--json`)
 
