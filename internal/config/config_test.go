@@ -54,6 +54,7 @@ defaults:
 
 func TestLoad_NoConfigFiles(t *testing.T) {
 	t.Chdir(t.TempDir())
+	t.Setenv("HOME", t.TempDir())
 
 	cfg, err := config.Load()
 	if err != nil {

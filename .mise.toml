@@ -11,7 +11,7 @@ BUILD_DATE = "{{exec(command='date -u +%Y-%m-%dT%H:%M:%SZ')}}"
 
 [tasks.build]
 description = "Build the kagi binary with version injection"
-run = 'go build -ldflags "-X github.com/joelazar/kagi/internal/version.Version=$VERSION -X github.com/joelazar/kagi/internal/version.Commit=$COMMIT -X github.com/joelazar/kagi/internal/version.Date=$BUILD_DATE" -o bin/kagi ./cmd/kagi'
+run = 'go build -ldflags "-s -w -X github.com/joelazar/kagi/internal/version.Version=$VERSION -X github.com/joelazar/kagi/internal/version.Commit=$COMMIT -X github.com/joelazar/kagi/internal/version.Date=$BUILD_DATE" -o bin/kagi ./cmd/kagi'
 
 [tasks.test]
 description = "Run all tests"
@@ -35,4 +35,4 @@ run = "rm -rf bin/"
 
 [tasks.install]
 description = "Install the kagi binary"
-run = 'go install -ldflags "-X github.com/joelazar/kagi/internal/version.Version=$VERSION -X github.com/joelazar/kagi/internal/version.Commit=$COMMIT -X github.com/joelazar/kagi/internal/version.Date=$BUILD_DATE" ./cmd/kagi'
+run = 'go install -ldflags "-s -w -X github.com/joelazar/kagi/internal/version.Version=$VERSION -X github.com/joelazar/kagi/internal/version.Commit=$COMMIT -X github.com/joelazar/kagi/internal/version.Date=$BUILD_DATE" ./cmd/kagi'
