@@ -2,18 +2,23 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/joelazar/kagi/internal/config"
 	"github.com/joelazar/kagi/internal/output"
+	"github.com/joelazar/kagi/internal/tui"
 	"github.com/joelazar/kagi/internal/version"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 var (
-	formatFlag string
-	cfg        *config.Config
+	formatFlag   string
+	interactiveF bool
+	noTUIFlag    bool
+	cfg          *config.Config
 )
 
 // NewRootCmd creates the root cobra command.
@@ -31,12 +36,22 @@ func NewRootCmd() *cobra.Command {
 			}
 			return nil
 		},
+		RunE: func(_ *cobra.Command, _ []string) error {
+			// Launch TUI when run with no args (or --interactive), unless --no-tui or piped.
+			if noTUIFlag || !isTerminal() {
+				return errors.New("no command specified. Run 'kagi --help' for usage")
+			}
+			executor := tui.NewExecutor(cfg)
+			return tui.Run(executor)
+		},
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
 
 	rootCmd.PersistentFlags().StringVar(&formatFlag, "format", "json",
 		fmt.Sprintf("output format (%s)", "json, compact, pretty, markdown, csv"))
+	rootCmd.Flags().BoolVarP(&interactiveF, "interactive", "i", false, "launch interactive TUI mode")
+	rootCmd.Flags().BoolVar(&noTUIFlag, "no-tui", false, "force non-interactive mode (useful in pipes)")
 
 	rootCmd.AddCommand(
 		newSearchCmd(),
@@ -63,4 +78,9 @@ func getFormat() output.Format {
 		return output.FormatJSON
 	}
 	return f
+}
+
+// isTerminal returns true if stdout is a terminal (not piped).
+func isTerminal() bool {
+	return term.IsTerminal(int(os.Stdout.Fd())) //nolint:gosec
 }
