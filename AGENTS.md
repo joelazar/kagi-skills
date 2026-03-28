@@ -13,13 +13,13 @@ kagi-summarizer/SKILL.md
 kagi-enrich/SKILL.md
 ```
 
-A `Makefile` at the repo root provides common tasks:
+Tasks are defined in `.mise.toml` and run via `mise run`:
 
-| Target       | Description                                     |
-| ------------ | ----------------------------------------------- |
-| `make build` | Build `bin/kagi` binary with version injection  |
-| `make lint`  | Run golangci-lint on all packages               |
-| `make test`  | Run `go test ./...`                             |
-| `make fmt`   | Run `gofumpt -w -l .`                           |
-| `make clean` | Remove built binaries                           |
-| `make install` | `go install` the binary                       |
+| Task               | Description                                     |
+| ------------------ | ----------------------------------------------- |
+| `mise run build`   | Build `bin/kagi` binary with version injection  |
+| `mise run lint`    | Run golangci-lint on all packages               |
+| `mise run test`    | Run `go test ./...`                             |
+| `mise run fmt`     | Run `gofumpt -w -l .`                           |
+| `mise run clean`   | Remove built binaries                           |
+| `mise run install` | `go install` the binary                         |

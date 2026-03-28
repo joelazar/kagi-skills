@@ -3,3 +3,34 @@ go = "1.26"
 golangci-lint = "latest"
 gofumpt = "latest"
 goreleaser = "latest"
+
+[env]
+VERSION = "{{exec(command='git describe --tags --always --dirty 2>/dev/null || echo dev')}}"
+
+[tasks.build]
+description = "Build the kagi binary with version injection"
+run = 'go build -ldflags "-X github.com/joelazar/kagi/internal/version.Version=$VERSION" -o bin/kagi ./cmd/kagi'
+
+[tasks.test]
+description = "Run all tests"
+run = "go test ./..."
+
+[tasks.test-integration]
+description = "Run integration tests"
+run = "go test -tags integration ./..."
+
+[tasks.lint]
+description = "Run golangci-lint"
+run = "golangci-lint run"
+
+[tasks.fmt]
+description = "Format code with gofumpt"
+run = "gofumpt -w -l ."
+
+[tasks.clean]
+description = "Remove built binaries"
+run = "rm -rf bin/"
+
+[tasks.install]
+description = "Install the kagi binary"
+run = 'go install -ldflags "-X github.com/joelazar/kagi/internal/version.Version=$VERSION" ./cmd/kagi'
