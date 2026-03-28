@@ -86,16 +86,14 @@ func renderQuickOutput(out quickOutput) error {
 		return output.WriteCompact(out)
 	}
 
-	// Convert HTML to readable text for terminal output
-	text := htmlToMarkdown(out.Answer)
-	fmt.Println(text)
+	// Convert HTML to markdown, then render with glamour for terminal
+	md := htmlToMarkdown(out.Answer)
+	fmt.Println(renderMarkdownForTerminal(md))
 
 	if out.References != "" {
 		refs := htmlToMarkdown(out.References)
 		if refs != "" {
-			fmt.Println()
-			fmt.Println("--- References ---")
-			fmt.Println(refs)
+			fmt.Println(renderMarkdownForTerminal("---\n**References**\n\n" + refs))
 		}
 	}
 

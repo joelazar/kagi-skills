@@ -1,10 +1,13 @@
 package commands
 
 import (
+	"os"
 	"regexp"
 	"strings"
 
 	htmltomarkdown "github.com/JohannesKaufmann/html-to-markdown/v2"
+	"github.com/charmbracelet/glamour"
+	"golang.org/x/term"
 )
 
 var (
@@ -31,4 +34,36 @@ func htmlToMarkdown(html string) string {
 	}
 
 	return strings.TrimSpace(md)
+}
+
+// renderMarkdownForTerminal renders markdown with glamour styling for terminal output.
+// Falls back to plain markdown if glamour fails or stdout is not a terminal.
+func renderMarkdownForTerminal(md string) string {
+	if md == "" {
+		return ""
+	}
+
+	if !term.IsTerminal(int(os.Stdout.Fd())) { //nolint:gosec
+		return md
+	}
+
+	width := 80
+	if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 0 { //nolint:gosec
+		width = w
+	}
+
+	r, err := glamour.NewTermRenderer(
+		glamour.WithAutoStyle(),
+		glamour.WithWordWrap(width),
+	)
+	if err != nil {
+		return md
+	}
+
+	rendered, err := r.Render(md)
+	if err != nil {
+		return md
+	}
+
+	return strings.TrimRight(rendered, "\n")
 }
