@@ -7,7 +7,7 @@ description: Summarize any URL or text using Kagi's Universal Summarizer API. Su
 
 Summarize any URL or block of text using [Kagi's Universal Summarizer API](https://help.kagi.com/kagi/api/summarizer.html). Handles articles, papers, PDFs, video transcripts, forum threads, and more. Supports multiple summarization engines and can translate output to 28 languages.
 
-This skill uses a Go binary for fast startup and zero runtime dependencies. The binary can be downloaded pre-built or compiled from source.
+This skill uses the unified `kagi` CLI binary for fast startup and zero runtime dependencies.
 
 ## Setup
 
@@ -37,34 +37,33 @@ Token-based, billed per 1,000 tokens processed. Cached requests are free.
 
 ```bash
 # Summarize a URL
-{baseDir}/kagi-summarizer.sh https://example.com/article
+kagi summarize https://example.com/article
 
 # Summarize raw text
-{baseDir}/kagi-summarizer.sh --text "Paste your article text here..."
+kagi summarize --text "Paste your article text here..."
 
 # Pipe text from stdin
-cat paper.txt | {baseDir}/kagi-summarizer
-echo "Long text..." | {baseDir}/kagi-summarizer.sh --type takeaway
+cat paper.txt | kagi summarize
+echo "Long text..." | kagi summarize --type takeaway
 
 # Choose engine
-{baseDir}/kagi-summarizer.sh https://arxiv.org/abs/1706.03762 --engine muriel
+kagi summarize https://arxiv.org/abs/1706.03762 --engine muriel
 
 # Get bullet-point takeaways instead of prose
-{baseDir}/kagi-summarizer.sh https://example.com/article --type takeaway
+kagi summarize https://example.com/article --type takeaway
 
 # Translate summary to another language
-{baseDir}/kagi-summarizer.sh https://example.com/article --lang DE
-{baseDir}/kagi-summarizer.sh https://example.com/article --lang JA
+kagi summarize https://example.com/article --lang DE
 
 # JSON output
-{baseDir}/kagi-summarizer.sh https://example.com/article --json
+kagi summarize https://example.com/article --format json
 
 # Show balance only when needed
-{baseDir}/kagi-summarizer.sh https://example.com/article --show-balance
-{baseDir}/kagi-summarizer.sh balance
+kagi summarize https://example.com/article --show-balance
+kagi balance
 
 # Combined options
-{baseDir}/kagi-summarizer.sh https://arxiv.org/abs/1706.03762 --engine muriel --type takeaway --lang EN --json
+kagi summarize https://arxiv.org/abs/1706.03762 --engine muriel --type takeaway --lang EN --format json
 ```
 
 ### Options
@@ -75,7 +74,7 @@ echo "Long text..." | {baseDir}/kagi-summarizer.sh --type takeaway
 | `--engine <name>` | Summarization engine (see below, default: `cecil`) |
 | `--type <type>` | Output type: `summary` (prose) or `takeaway` (bullets) |
 | `--lang <code>` | Translate output to a language code (e.g. `EN`, `DE`, `FR`, `JA`) |
-| `--json` | Emit JSON output |
+| `--format <fmt>` | Output format: json (default), compact, pretty |
 | `--no-cache` | Bypass cached responses |
 | `--show-balance` | Print API balance to stderr for this call |
 | `--timeout <sec>` | HTTP timeout in seconds (default: 120) |
@@ -94,89 +93,38 @@ Common codes: `EN` English · `DE` German · `FR` French · `ES` Spanish · `IT`
 
 Full list: BG CS DA DE EL EN ES ET FI FR HU ID IT JA KO LT LV NB NL PL PT RO RU SK SL SV TR UK ZH ZH-HANT
 
-If no language is specified, the output language follows the document's own language.
-
 ## Output
 
-### Default (text)
+### Default (JSON)
 
-Prints the summary to stdout. Token usage is printed to stderr. API balance is shown only with `--show-balance`:
+Returns a JSON object with `input`, `output`, `tokens`, `engine`, `type`, `meta`.
 
-```
-The paper "Attention Is All You Need" introduces the Transformer architecture,
-a novel approach to sequence transduction tasks that relies entirely on
-attention mechanisms, dispensing with recurrence and convolutions...
+### Pretty text (`--format pretty`)
 
-[tokens: 1243]
-```
-
-You can check balance separately:
-
-```bash
-{baseDir}/kagi-summarizer.sh balance
-{baseDir}/kagi-summarizer.sh balance --json
-```
-
-### JSON (`--json`)
-
-```json
-{
-  "input": "https://arxiv.org/abs/1706.03762",
-  "output": "The paper introduces the Transformer...",
-  "tokens": 1243,
-  "engine": "muriel",
-  "type": "takeaway",
-  "meta": {
-    "id": "abc123",
-    "node": "us-east",
-    "ms": 4821,
-    "api_balance": 9.98
-  }
-}
-```
+Prints the summary to stdout. Token usage printed to stderr.
 
 ## When to Use
 
-- **Use kagi-summarizer** when you have a URL or document and need a concise summary without reading it yourself
-- **Use `--type takeaway`** for structured bullet points — ideal for research papers, long articles, or meeting notes
-- **Use `--engine muriel`** when quality matters most (longer documents, academic papers, technical reports)
-- **Use `--lang`** when you need the summary in a language different from the source
-- **Use kagi-fastgpt** instead when you have a question that requires synthesizing information from multiple sources via live web search
-- **Use kagi-search** instead when you need raw search results to scan or compare
+- **Use kagi summarize** when you have a URL or document and need a concise summary
+- **Use `--type takeaway`** for structured bullet points — ideal for research papers, long articles
+- **Use `--engine muriel`** when quality matters most (longer documents, academic papers)
+- **Use `--lang`** when you need the summary in a different language
+- **Use kagi fastgpt** instead when you have a question requiring synthesis from multiple sources
+- **Use kagi search** instead when you need raw search results to scan or compare
 
 ## Installation
 
-### Option A — Download pre-built binary (no Go required)
+### Option A — Install from source (requires Go 1.26+)
 
 ```bash
-OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-ARCH=$(uname -m)
-case "$ARCH" in
-  x86_64)        ARCH="amd64" ;;
-  aarch64|arm64) ARCH="arm64" ;;
-esac
-
-TAG=$(curl -fsSL "https://api.github.com/repos/joelazar/kagi-skills/releases/latest" | grep '"tag_name"' | cut -d'"' -f4)
-BINARY="kagi-summarizer_${TAG}_${OS}_${ARCH}"
-
-mkdir -p {baseDir}/.bin
-curl -fsSL "https://github.com/joelazar/kagi-skills/releases/download/${TAG}/${BINARY}" \
-  -o {baseDir}/.bin/kagi-summarizer
-chmod +x {baseDir}/.bin/kagi-summarizer
-
-# Verify checksum (recommended)
-curl -fsSL "https://github.com/joelazar/kagi-skills/releases/download/${TAG}/checksums.txt" | \
-  grep "${BINARY}" | sha256sum --check
+cd {baseDir}/.. && go install -ldflags "-X github.com/joelazar/kagi/internal/version.Version=$(git describe --tags --always)" ./cmd/kagi
 ```
 
-Pre-built binaries are available for Linux and macOS (amd64 + arm64) and Windows (amd64).
-
-### Option B — Build from source (requires Go 1.26+)
+### Option B — Build locally
 
 ```bash
-cd {baseDir} && go build -o .bin/kagi-summarizer .
+cd {baseDir}/.. && make build
+# Binary at {baseDir}/../bin/kagi
 ```
 
-Alternatively, just run `{baseDir}/kagi-summarizer.sh` directly — the wrapper auto-builds on first run if Go is available.
-
-The binary has no external dependencies — only the Go standard library.
+The binary has no external dependencies beyond the Go standard library and cobra.

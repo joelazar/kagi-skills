@@ -7,11 +7,11 @@ description: Ask questions and get AI-synthesized answers backed by live web sea
 
 Get AI-generated answers with cited web sources using [Kagi's FastGPT API](https://help.kagi.com/kagi/api/fastgpt.html). FastGPT runs a full web search under the hood and synthesizes results into a concise answer — ideal for factual questions, API lookups, and current-events queries.
 
-This skill uses a Go binary for fast startup and no runtime dependencies. The binary can be downloaded pre-built or compiled from source.
+This skill uses the unified `kagi` CLI binary for fast startup and no runtime dependencies.
 
 ## Setup
 
-Requires a Kagi account with API access enabled. Uses the same `KAGI_API_KEY` as the `kagi-search` skill.
+Requires a Kagi account with API access enabled. Uses the same `KAGI_API_KEY` as all other kagi-* skills.
 
 1. Create an account at https://kagi.com/signup
 2. Navigate to Settings → Advanced → API portal: https://kagi.com/settings/api
@@ -30,20 +30,20 @@ Requires a Kagi account with API access enabled. Uses the same `KAGI_API_KEY` as
 ## Usage
 
 ```bash
-{baseDir}/kagi-fastgpt.sh "query"                        # Ask a question (default)
-{baseDir}/kagi-fastgpt.sh "query" --json                 # JSON output
-{baseDir}/kagi-fastgpt.sh "query" --no-refs              # Answer only, no references
-{baseDir}/kagi-fastgpt.sh "query" --no-cache             # Bypass response cache
-{baseDir}/kagi-fastgpt.sh "query" --show-balance         # Show API balance for this call
-{baseDir}/kagi-fastgpt.sh balance                          # Show last cached API balance
-{baseDir}/kagi-fastgpt.sh "query" --timeout 60           # Custom timeout (default: 30s)
+kagi fastgpt "query"                        # Ask a question (default)
+kagi fastgpt "query" --format json           # JSON output
+kagi fastgpt "query" --no-refs               # Answer only, no references
+kagi fastgpt "query" --no-cache              # Bypass response cache
+kagi fastgpt "query" --show-balance          # Show API balance for this call
+kagi balance                                 # Show last cached API balance
+kagi fastgpt "query" --timeout 60            # Custom timeout (default: 30s)
 ```
 
 ### Options
 
 | Flag | Description |
 |------|-------------|
-| `--json` | Emit JSON output (see below) |
+| `--format <fmt>` | Output format: json (default), compact, pretty |
 | `--no-refs` | Suppress references in text output |
 | `--no-cache` | Bypass cached responses (use for time-sensitive queries) |
 | `--show-balance` | Print API balance to stderr for this call |
@@ -51,7 +51,17 @@ Requires a Kagi account with API access enabled. Uses the same `KAGI_API_KEY` as
 
 ## Output
 
-### Default (text)
+### Default (JSON)
+
+Returns a JSON object with:
+
+- `query` — the original query
+- `output` — the synthesized answer
+- `tokens` — tokens consumed
+- `references[]` — array of `{ title, url, snippet }` objects
+- `meta` — API metadata (`id`, `node`, `ms`)
+
+### Pretty text (`--format pretty`)
 
 Prints the synthesized answer, followed by a numbered reference list:
 
@@ -62,67 +72,29 @@ Python 3.11 was released on October 24, 2022 and introduced several improvements
 [1] What's New In Python 3.11 — Python 3.11.3 documentation
     https://docs.python.org/3/whatsnew/3.11.html
     The headline changes in Python 3.11 include significant performance improvements...
-[2] ...
 ```
 
 Token usage is printed to stderr. API balance is only shown when you pass `--show-balance`.
 
-To check balance separately without cluttering every response:
-
-```bash
-{baseDir}/kagi-fastgpt.sh balance
-{baseDir}/kagi-fastgpt.sh balance --json
-```
-
-### JSON (`--json`)
-
-Returns a JSON object with:
-
-- `query` — the original query
-- `output` — the synthesized answer
-- `tokens` — tokens consumed
-- `references[]` — array of `{ title, url, snippet }` objects
-- `meta` — API metadata (`id`, `node`, `ms`)
-
 ## When to Use
 
-- **Use kagi-fastgpt** when you need a direct answer synthesized from web sources (e.g. "What version of X was released last month?", "How do I configure Y?")
-- **Use kagi-search** when you need raw search results to scan, compare, or extract data from yourself
+- **Use kagi fastgpt** when you need a direct answer synthesized from web sources (e.g. "What version of X was released last month?", "How do I configure Y?")
+- **Use kagi search** when you need raw search results to scan, compare, or extract data from yourself
 - **Use web-browser** when you need to interact with a page or the content is behind JavaScript
 
 ## Installation
 
-### Option A — Download pre-built binary (no Go required)
+### Option A — Install from source (requires Go 1.26+)
 
 ```bash
-OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-ARCH=$(uname -m)
-case "$ARCH" in
-  x86_64)        ARCH="amd64" ;;
-  aarch64|arm64) ARCH="arm64" ;;
-esac
-
-TAG=$(curl -fsSL "https://api.github.com/repos/joelazar/kagi-skills/releases/latest" | grep '"tag_name"' | cut -d'"' -f4)
-BINARY="kagi-fastgpt_${TAG}_${OS}_${ARCH}"
-
-mkdir -p {baseDir}/.bin
-curl -fsSL "https://github.com/joelazar/kagi-skills/releases/download/${TAG}/${BINARY}" \
-  -o {baseDir}/.bin/kagi-fastgpt
-chmod +x {baseDir}/.bin/kagi-fastgpt
-
-# Verify checksum (recommended)
-curl -fsSL "https://github.com/joelazar/kagi-skills/releases/download/${TAG}/checksums.txt" | \
-  grep "${BINARY}" | sha256sum --check
+cd {baseDir}/.. && go install -ldflags "-X github.com/joelazar/kagi/internal/version.Version=$(git describe --tags --always)" ./cmd/kagi
 ```
 
-Pre-built binaries are available for Linux and macOS (amd64 + arm64) and Windows (amd64).
-
-### Option B — Build from source (requires Go 1.26+)
+### Option B — Build locally
 
 ```bash
-cd {baseDir} && go build -o .bin/kagi-fastgpt .
+cd {baseDir}/.. && make build
+# Binary at {baseDir}/../bin/kagi
 ```
 
-Alternatively, just run `{baseDir}/kagi-fastgpt.sh` directly — the wrapper auto-builds on first run if Go is available.
-
-The binary has no external dependencies — only the Go standard library.
+The binary has no external dependencies beyond the Go standard library and cobra.

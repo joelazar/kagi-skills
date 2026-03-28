@@ -14,7 +14,7 @@ Two indexes are available:
 | `web` | **Teclis** | Independent websites, personal blogs, open-source projects, non-commercial content |
 | `news` | **TinyGem** | Non-mainstream news sources, interesting discussions, off-the-beaten-path journalism |
 
-This skill uses a Go binary for fast startup and zero runtime dependencies. The binary can be downloaded pre-built or compiled from source.
+This skill uses the unified `kagi` CLI binary for fast startup and zero runtime dependencies.
 
 ## Setup
 
@@ -37,71 +37,45 @@ Requires a Kagi account with API access enabled. Uses the same `KAGI_API_KEY` as
 ## Usage
 
 ```bash
-# Search the independent web (Teclis index) — default
-{baseDir}/kagi-enrich.sh web "rust async programming"
-{baseDir}/kagi-enrich.sh "rust async programming"        # web is the default
+# Search the independent web (Teclis index)
+kagi enrich web "rust async programming"
 
 # Search non-mainstream news (TinyGem index)
-{baseDir}/kagi-enrich.sh news "open source AI"
+kagi enrich news "open source AI"
 
 # Limit number of results
-{baseDir}/kagi-enrich.sh web "sqlite internals" -n 5
+kagi enrich web "sqlite internals" -n 5
 
 # JSON output
-{baseDir}/kagi-enrich.sh web "zig programming language" --json
-{baseDir}/kagi-enrich.sh news "climate change solutions" --json
+kagi enrich web "zig programming language" --format json
+kagi enrich news "climate change solutions" --format json
 
 # Show balance only when needed
-{baseDir}/kagi-enrich.sh web "query" --show-balance
-{baseDir}/kagi-enrich.sh balance
+kagi enrich web "query" --show-balance
+kagi balance
 
 # Custom timeout
-{baseDir}/kagi-enrich.sh web "query" --timeout 30
+kagi enrich web "query" --timeout 30
 ```
 
 ### Options
 
 | Flag | Description |
 |------|-------------|
-| `-n <num>` | Max results to display (default: all returned) |
-| `--json` | Emit JSON output |
+| `-n, --num <num>` | Max results to display (default: all returned) |
+| `--format <fmt>` | Output format: json (default), compact, pretty |
 | `--show-balance` | Print API balance to stderr for this call |
 | `--timeout <sec>` | HTTP timeout in seconds (default: 15) |
 
 ## Output
 
-### Default (text)
-
-```
---- Result 1 ---
-Title: SQLite Internals: How The World's Most Used Database Works
-URL:   https://www.compileralchemy.com/books/sqlite-internals/
-Date:  2023-04-01T00:00:00Z
-       A deep-dive into how SQLite's B-tree storage engine, WAL journal...
-
---- Result 2 ---
-...
-```
-
-Balance is not printed by default. Use `--show-balance` on a query or run `balance` separately:
-
-```bash
-{baseDir}/kagi-enrich.sh balance
-{baseDir}/kagi-enrich.sh balance --json
-```
-
-### JSON (`--json`)
+### Default (JSON)
 
 ```json
 {
   "query": "sqlite internals",
   "index": "web",
-  "meta": {
-    "id": "abc123",
-    "node": "us-east4",
-    "ms": 386,
-    "api_balance": 9.998
-  },
+  "meta": { "id": "abc123", "node": "us-east4", "ms": 386, "api_balance": 9.998 },
   "results": [
     {
       "rank": 1,
@@ -114,12 +88,16 @@ Balance is not printed by default. Use `--show-balance` on a query or run `balan
 }
 ```
 
+### Pretty text (`--format pretty`)
+
+Prints readable text blocks with labeled fields.
+
 ## When to Use
 
-- **Use `web`** when you want independent, non-commercial perspectives on a topic — personal blogs, indie projects, academic pages, niche communities — results that mainstream search drowns out with SEO-optimized commercial sites
-- **Use `news`** when you want news and discussions from sources outside the mainstream media cycle — niche outlets, Hacker News threads, Reddit discussions, independent journalists
-- **Combine with `kagi-search`** for the most complete picture: `kagi-search` for high-quality general results, `kagi-enrich web` for independent voices, `kagi-enrich news` for alternative news angles
-- **Use `kagi-fastgpt`** instead when you need a synthesized answer rather than a list of sources
+- **Use `web`** when you want independent, non-commercial perspectives — personal blogs, indie projects, academic pages
+- **Use `news`** when you want news from sources outside the mainstream media cycle
+- **Combine with `kagi search`** for the most complete picture
+- **Use `kagi fastgpt`** instead when you need a synthesized answer rather than a list of sources
 
 ### Note on result counts
 
@@ -127,37 +105,17 @@ The enrichment indexes are intentionally niche — they may return fewer results
 
 ## Installation
 
-### Option A — Download pre-built binary (no Go required)
+### Option A — Install from source (requires Go 1.26+)
 
 ```bash
-OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-ARCH=$(uname -m)
-case "$ARCH" in
-  x86_64)        ARCH="amd64" ;;
-  aarch64|arm64) ARCH="arm64" ;;
-esac
-
-TAG=$(curl -fsSL "https://api.github.com/repos/joelazar/kagi-skills/releases/latest" | grep '"tag_name"' | cut -d'"' -f4)
-BINARY="kagi-enrich_${TAG}_${OS}_${ARCH}"
-
-mkdir -p {baseDir}/.bin
-curl -fsSL "https://github.com/joelazar/kagi-skills/releases/download/${TAG}/${BINARY}" \
-  -o {baseDir}/.bin/kagi-enrich
-chmod +x {baseDir}/.bin/kagi-enrich
-
-# Verify checksum (recommended)
-curl -fsSL "https://github.com/joelazar/kagi-skills/releases/download/${TAG}/checksums.txt" | \
-  grep "${BINARY}" | sha256sum --check
+cd {baseDir}/.. && go install -ldflags "-X github.com/joelazar/kagi/internal/version.Version=$(git describe --tags --always)" ./cmd/kagi
 ```
 
-Pre-built binaries are available for Linux and macOS (amd64 + arm64) and Windows (amd64).
-
-### Option B — Build from source (requires Go 1.26+)
+### Option B — Build locally
 
 ```bash
-cd {baseDir} && go build -o .bin/kagi-enrich .
+cd {baseDir}/.. && make build
+# Binary at {baseDir}/../bin/kagi
 ```
 
-Alternatively, just run `{baseDir}/kagi-enrich.sh` directly — the wrapper auto-builds on first run if Go is available.
-
-The binary has no external dependencies — only the Go standard library.
+The binary has no external dependencies beyond the Go standard library and cobra.

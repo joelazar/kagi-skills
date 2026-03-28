@@ -2,63 +2,47 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, feat/*]
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
-  format:
-    name: Format check
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-go@v5
         with:
-          go-version: stable
-
-      - name: Install gofumpt
-        run: go install mvdan.cc/gofumpt@latest
-
-      - name: Check formatting
+          go-version: "1.26"
+      - name: Format check
         run: |
-          files=$(gofumpt -l .)
-          if [ -n "$files" ]; then
-            echo "The following files need formatting (run: gofumpt -w -l .):"
-            echo "$files"
-            exit 1
-          fi
-
-  build:
-    name: Build ${{ matrix.skill }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        skill:
-          - kagi-search
-          - kagi-fastgpt
-          - kagi-summarizer
-          - kagi-enrich
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: ${{ matrix.skill }}/go.mod
-          # go.sum only exists for modules with external deps (kagi-search).
-          # setup-go will auto-discover it; others get no cache, which is fine.
-          cache-dependency-path: '**/go.sum'
-
-      - name: Build
-        run: |
-          cd ${{ matrix.skill }}
-          go build -o /dev/null ./...
-
+          go install mvdan.cc/gofumpt@latest
+          gofumpt -d .
+          test -z "$(gofumpt -l .)"
       - name: Lint
         uses: golangci/golangci-lint-action@v7
         with:
-          version: v2.10.1
-          working-directory: ${{ matrix.skill }}
-          args: --config ../.golangci.yml
+          version: latest
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+      - name: Build
+        run: make build
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+      - name: Test
+        run: make test
