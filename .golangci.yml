@@ -65,6 +65,7 @@ linters:
           - gocyclo
           - gosec
           - funlen
+          - testpackage
         path: _test\.go
       # G704 (SSRF) and G705 (XSS) are false positives for CLI tools that
       # intentionally call known API endpoints and write status to stderr.
