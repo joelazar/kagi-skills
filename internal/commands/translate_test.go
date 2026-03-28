@@ -9,10 +9,8 @@ import (
 
 func TestTranslateResponseParsing(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		resp := translateResponse{
+		resp := translateTextResponse{
 			Translation: "Hallo Welt!",
-			SourceLang:  "EN",
-			TargetLang:  "DE",
 		}
 		json.NewEncoder(w).Encode(resp)
 	}))
@@ -24,15 +22,12 @@ func TestTranslateResponseParsing(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var tResp translateResponse
+	var tResp translateTextResponse
 	if err := json.NewDecoder(resp.Body).Decode(&tResp); err != nil {
 		t.Fatalf("failed to decode: %v", err)
 	}
 
 	if tResp.Translation != "Hallo Welt!" {
 		t.Errorf("expected 'Hallo Welt!', got %q", tResp.Translation)
-	}
-	if tResp.TargetLang != "DE" {
-		t.Errorf("expected 'DE', got %q", tResp.TargetLang)
 	}
 }

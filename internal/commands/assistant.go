@@ -17,29 +17,73 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const assistantURL = "https://kagi.com/api/v1/assistant"
+const (
+	assistantPromptURL       = "https://kagi.com/assistant/prompt"
+	assistantThreadListURL   = "https://kagi.com/assistant/thread_list"
+	assistantThreadOpenURL   = "https://kagi.com/assistant/thread_open"
+	assistantThreadDeleteURL = "https://kagi.com/assistant/thread_delete"
+	assistantZeroBranchUUID  = "00000000-0000-4000-0000-000000000000"
+	kagiStreamAccept         = "application/vnd.kagi.stream"
+)
 
-type assistantRequest struct {
-	Query    string `json:"query"`
-	ThreadID string `json:"thread_id,omitempty"`
+// --- Stream frame types ---
+
+type assistantHello struct {
+	Version string `json:"v"`
+	Trace   string `json:"trace"`
 }
 
-type assistantResponse struct {
-	Output     string               `json:"output"`
-	ThreadID   string               `json:"thread_id,omitempty"`
-	References []assistantReference `json:"references,omitempty"`
+type assistantThreadPayload struct {
+	ID        string   `json:"id"`
+	Title     string   `json:"title"`
+	Ack       string   `json:"ack,omitempty"`
+	CreatedAt string   `json:"created_at,omitempty"`
+	ExpiresAt string   `json:"expires_at,omitempty"`
+	Saved     bool     `json:"saved"`
+	Shared    bool     `json:"shared"`
+	BranchID  string   `json:"branch_id,omitempty"`
+	TagIDs    []string `json:"tag_ids,omitempty"`
 }
 
-type assistantReference struct {
-	Title string `json:"title"`
-	URL   string `json:"url"`
+type assistantMessagePayload struct {
+	ID             string   `json:"id"`
+	ThreadID       string   `json:"thread_id"`
+	CreatedAt      string   `json:"created_at,omitempty"`
+	BranchList     []string `json:"branch_list,omitempty"`
+	State          string   `json:"state"`
+	Prompt         string   `json:"prompt"`
+	Reply          string   `json:"reply,omitempty"`
+	Markdown       string   `json:"md,omitempty"`
+	ReferencesMD   string   `json:"references_md,omitempty"`
+	ReferencesHTML string   `json:"references_html,omitempty"`
+	TraceID        string   `json:"trace_id,omitempty"`
+}
+
+type assistantThreadListPayload struct {
+	ID        string `json:"id"`
+	Title     string `json:"title"`
+	CreatedAt string `json:"created_at,omitempty"`
+	ExpiresAt string `json:"expires_at,omitempty"`
+	Saved     bool   `json:"saved"`
+	Shared    bool   `json:"shared"`
+}
+
+// --- Response types ---
+
+type assistantPromptResponse struct {
+	Trace      string `json:"trace,omitempty"`
+	ThreadID   string `json:"thread_id"`
+	Title      string `json:"title,omitempty"`
+	Output     string `json:"output"`
+	References string `json:"references,omitempty"`
 }
 
 type assistantOutput struct {
-	Query      string               `json:"query"`
-	Output     string               `json:"output"`
-	ThreadID   string               `json:"thread_id,omitempty"`
-	References []assistantReference `json:"references,omitempty"`
+	Query      string `json:"query"`
+	ThreadID   string `json:"thread_id"`
+	Title      string `json:"title,omitempty"`
+	Output     string `json:"output"`
+	References string `json:"references,omitempty"`
 }
 
 type threadListOutput struct {
@@ -49,7 +93,22 @@ type threadListOutput struct {
 type threadSummary struct {
 	ID        string `json:"id"`
 	Title     string `json:"title"`
-	UpdatedAt string `json:"updated_at,omitempty"`
+	CreatedAt string `json:"created_at,omitempty"`
+	Saved     bool   `json:"saved"`
+}
+
+type threadDetail struct {
+	ID       string                `json:"id"`
+	Title    string                `json:"title,omitempty"`
+	Messages []threadDetailMessage `json:"messages"`
+}
+
+type threadDetailMessage struct {
+	ID        string `json:"id"`
+	State     string `json:"state"`
+	Prompt    string `json:"prompt,omitempty"`
+	Reply     string `json:"reply,omitempty"`
+	CreatedAt string `json:"created_at,omitempty"`
 }
 
 func newAssistantCmd() *cobra.Command {
@@ -62,7 +121,7 @@ func newAssistantCmd() *cobra.Command {
 		Use:   "assistant <query>",
 		Short: "Chat with Kagi Assistant",
 		Long: `Ask questions and get AI-powered answers from Kagi Assistant.
-Requires KAGI_SESSION_TOKEN (your Kagi session cookie or token URL).
+Requires KAGI_SESSION_TOKEN (your Kagi session cookie).
 
 Supports conversation threads via --thread flag.`,
 		Example: `  kagi assistant "Explain quantum computing"
@@ -81,15 +140,16 @@ Supports conversation threads via --thread flag.`,
 			}
 
 			client := api.NewHTTPClient(time.Duration(timeoutSec) * time.Second)
-			resp, err := callAssistant(client, sessionToken, query, threadID)
+			resp, err := callAssistantPrompt(client, sessionToken, query, threadID)
 			if err != nil {
 				return err
 			}
 
 			out := assistantOutput{
 				Query:      query,
-				Output:     resp.Output,
 				ThreadID:   resp.ThreadID,
+				Title:      resp.Title,
+				Output:     resp.Output,
 				References: resp.References,
 			}
 
@@ -123,7 +183,7 @@ func newAssistantThreadCmd() *cobra.Command {
 func newAssistantThreadListCmd() *cobra.Command {
 	var timeoutSec int
 
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List conversation threads",
 		RunE: func(_ *cobra.Command, _ []string) error {
@@ -154,14 +214,18 @@ func newAssistantThreadListCmd() *cobra.Command {
 			for _, t := range threads {
 				fmt.Printf("ID:    %s\n", t.ID)
 				fmt.Printf("Title: %s\n", t.Title)
-				if t.UpdatedAt != "" {
-					fmt.Printf("Date:  %s\n", t.UpdatedAt)
+				if t.CreatedAt != "" {
+					fmt.Printf("Date:  %s\n", t.CreatedAt)
 				}
 				fmt.Println()
 			}
 			return nil
 		},
 	}
+
+	cmd.Flags().IntVar(&timeoutSec, "timeout", 30, "HTTP timeout in seconds")
+
+	return cmd
 }
 
 func newAssistantThreadGetCmd() *cobra.Command {
@@ -189,9 +253,18 @@ func newAssistantThreadGetCmd() *cobra.Command {
 				return output.WriteJSON(thread)
 			}
 
-			fmt.Printf("Thread: %s\n\n", args[0])
+			fmt.Printf("Thread: %s\n", thread.ID)
+			if thread.Title != "" {
+				fmt.Printf("Title:  %s\n", thread.Title)
+			}
+			fmt.Println()
 			for _, msg := range thread.Messages {
-				fmt.Printf("[%s] %s\n\n", msg.Role, msg.Content)
+				if msg.Prompt != "" {
+					fmt.Printf("[user] %s\n\n", msg.Prompt)
+				}
+				if msg.Reply != "" {
+					fmt.Printf("[assistant] %s\n\n", msg.Reply)
+				}
 			}
 			return nil
 		},
@@ -209,8 +282,15 @@ func newAssistantThreadDeleteCmd() *cobra.Command {
 				return err
 			}
 
-			client := api.NewHTTPClient(15 * time.Second)
-			if err := deleteAssistantThread(client, sessionToken, args[0]); err != nil {
+			client := api.NewHTTPClient(30 * time.Second)
+
+			// First, fetch the thread to get its details (needed for delete payload)
+			thread, err := getAssistantThread(client, sessionToken, args[0])
+			if err != nil {
+				return fmt.Errorf("failed to fetch thread for deletion: %w", err)
+			}
+
+			if err := deleteAssistantThread(client, sessionToken, thread); err != nil {
 				return err
 			}
 
@@ -232,12 +312,10 @@ func renderAssistantOutput(out assistantOutput) error {
 
 	fmt.Println(out.Output)
 
-	if len(out.References) > 0 {
+	if out.References != "" {
 		fmt.Println()
 		fmt.Println("--- References ---")
-		for i, ref := range out.References {
-			fmt.Printf("[%d] %s\n    %s\n", i+1, ref.Title, ref.URL)
-		}
+		fmt.Println(out.References)
 	}
 
 	if out.ThreadID != "" {
@@ -246,6 +324,8 @@ func renderAssistantOutput(out assistantOutput) error {
 
 	return nil
 }
+
+// --- Session cookie ---
 
 func resolveSessionCookie(sessionToken string) *http.Cookie {
 	token := sessionToken
@@ -262,146 +342,280 @@ func resolveSessionCookie(sessionToken string) *http.Cookie {
 	}
 }
 
-func callAssistant(client *http.Client, sessionToken, query, threadID string) (*assistantResponse, error) {
-	reqBody := assistantRequest{
-		Query:    query,
-		ThreadID: threadID,
+// --- Kagi stream protocol ---
+
+// executeKagiStream sends a POST request using Kagi's streaming protocol and returns the raw body.
+func executeKagiStream(client *http.Client, url, sessionToken string, payload any) (string, error) {
+	bodyBytes, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
 	}
 
-	bodyBytes, err := json.Marshal(reqBody)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, url, bytes.NewReader(bodyBytes))
 	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, assistantURL, bytes.NewReader(bodyBytes))
-	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	req.AddCookie(resolveSessionCookie(sessionToken))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Accept", kagiStreamAccept)
 	req.Header.Set("User-Agent", api.DefaultUserAgent)
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, api.MaxResponseBody))
 	if err != nil {
-		return nil, err
+		return "", err
+	}
+
+	bodyStr := string(body)
+
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+		return "", errors.New("invalid or expired Kagi session token")
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, truncateString(string(body), 200))
+		return "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, truncateString(bodyStr, 200))
 	}
 
-	var out assistantResponse
-	if err := json.Unmarshal(body, &out); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
+	// Check for HTML response (indicates auth redirect)
+	if strings.HasPrefix(strings.TrimSpace(bodyStr), "<!") || strings.HasPrefix(strings.TrimSpace(bodyStr), "<html") {
+		return "", errors.New("invalid or expired Kagi session token")
 	}
 
-	return &out, nil
+	return bodyStr, nil
 }
 
-type threadDetail struct {
-	ID       string          `json:"id"`
-	Messages []threadMessage `json:"messages"`
+// parseStreamFrames splits a Kagi stream body into tag:payload pairs.
+func parseStreamFrames(body string) map[string][]string {
+	frames := make(map[string][]string)
+	for frame := range strings.SplitSeq(body, "\x00\n") {
+		frame = strings.TrimSpace(frame)
+		if frame == "" {
+			continue
+		}
+		tag, payload, ok := strings.Cut(frame, ":")
+		if !ok {
+			continue
+		}
+		frames[tag] = append(frames[tag], payload)
+	}
+	return frames
 }
 
-type threadMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+// --- Assistant API calls ---
+
+func callAssistantPrompt(client *http.Client, sessionToken, query, threadID string) (*assistantPromptResponse, error) {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return nil, errors.New("assistant query cannot be empty")
+	}
+
+	var tidValue any
+	if tid := strings.TrimSpace(threadID); tid != "" {
+		tidValue = tid
+	}
+
+	payload := map[string]any{
+		"focus": map[string]any{
+			"thread_id":  tidValue,
+			"branch_id":  assistantZeroBranchUUID,
+			"prompt":     query,
+			"message_id": nil,
+		},
+	}
+
+	body, err := executeKagiStream(client, assistantPromptURL, sessionToken, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return parseAssistantPromptStream(body)
+}
+
+func parseAssistantPromptStream(body string) (*assistantPromptResponse, error) {
+	frames := parseStreamFrames(body)
+
+	resp := &assistantPromptResponse{}
+
+	// Parse hello frame
+	if hellos, ok := frames["hi"]; ok && len(hellos) > 0 {
+		var hello assistantHello
+		if err := json.Unmarshal([]byte(hellos[0]), &hello); err == nil {
+			resp.Trace = hello.Trace
+		}
+	}
+
+	// Parse thread frame
+	if threads, ok := frames["thread.json"]; ok && len(threads) > 0 {
+		var thread assistantThreadPayload
+		if err := json.Unmarshal([]byte(threads[0]), &thread); err != nil {
+			return nil, fmt.Errorf("failed to parse assistant thread frame: %w", err)
+		}
+		resp.ThreadID = thread.ID
+		resp.Title = thread.Title
+	} else {
+		return nil, errors.New("assistant response did not include a thread.json frame")
+	}
+
+	// Parse message frame
+	if err := parseAssistantMessage(frames, resp); err != nil {
+		return nil, err
+	}
+
+	// Check for limit notice
+	if notices, ok := frames["limit_notice.html"]; ok && len(notices) > 0 {
+		return nil, fmt.Errorf("kagi assistant rate limited: %s", notices[0])
+	}
+
+	// Check for unauthorized
+	if _, ok := frames["unauthorized"]; ok {
+		return nil, errors.New("invalid or expired Kagi session token")
+	}
+
+	return resp, nil
+}
+
+func parseAssistantMessage(frames map[string][]string, resp *assistantPromptResponse) error {
+	messages, ok := frames["new_message.json"]
+	if !ok || len(messages) == 0 {
+		return errors.New("assistant response did not include a new_message.json frame")
+	}
+
+	var msg assistantMessagePayload
+	if err := json.Unmarshal([]byte(messages[0]), &msg); err != nil {
+		return fmt.Errorf("failed to parse assistant message frame: %w", err)
+	}
+
+	if msg.State == "error" {
+		errText := msg.Markdown
+		if errText == "" {
+			errText = msg.Reply
+		}
+		if errText == "" {
+			errText = "Kagi Assistant returned an error"
+		}
+		return errors.New(errText)
+	}
+
+	resp.Output = msg.Markdown
+	if resp.Output == "" {
+		resp.Output = msg.Reply
+	}
+	resp.References = msg.ReferencesMD
+
+	return nil
 }
 
 func listAssistantThreads(client *http.Client, sessionToken string) ([]threadSummary, error) {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, assistantURL+"/threads", nil)
+	payload := map[string]any{"limit": 100}
+
+	body, err := executeKagiStream(client, assistantThreadListURL, sessionToken, payload)
 	if err != nil {
 		return nil, err
 	}
 
-	req.AddCookie(resolveSessionCookie(sessionToken))
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", api.DefaultUserAgent)
+	return parseAssistantThreadListStream(body)
+}
 
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
+func parseAssistantThreadListStream(body string) ([]threadSummary, error) {
+	frames := parseStreamFrames(body)
 
-	body, err := io.ReadAll(io.LimitReader(resp.Body, api.MaxResponseBody))
-	if err != nil {
-		return nil, err
+	threadFrames, ok := frames["thread.json"]
+	if !ok {
+		return []threadSummary{}, nil
 	}
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, truncateString(string(body), 200))
-	}
-
-	var threads []threadSummary
-	if err := json.Unmarshal(body, &threads); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
+	threads := make([]threadSummary, 0, len(threadFrames))
+	for _, raw := range threadFrames {
+		var t assistantThreadListPayload
+		if err := json.Unmarshal([]byte(raw), &t); err != nil {
+			continue
+		}
+		threads = append(threads, threadSummary{
+			ID:        t.ID,
+			Title:     t.Title,
+			CreatedAt: t.CreatedAt,
+			Saved:     t.Saved,
+		})
 	}
 
 	return threads, nil
 }
 
 func getAssistantThread(client *http.Client, sessionToken, threadID string) (*threadDetail, error) {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, assistantURL+"/threads/"+threadID, nil)
+	tid := strings.TrimSpace(threadID)
+	if tid == "" {
+		return nil, errors.New("thread ID is required")
+	}
+
+	payload := map[string]any{
+		"focus": map[string]any{
+			"thread_id": tid,
+			"branch_id": assistantZeroBranchUUID,
+		},
+	}
+
+	body, err := executeKagiStream(client, assistantThreadOpenURL, sessionToken, payload)
 	if err != nil {
 		return nil, err
 	}
 
-	req.AddCookie(resolveSessionCookie(sessionToken))
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", api.DefaultUserAgent)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, api.MaxResponseBody))
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, truncateString(string(body), 200))
-	}
-
-	var thread threadDetail
-	if err := json.Unmarshal(body, &thread); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	return &thread, nil
+	return parseAssistantThreadOpenStream(body, tid)
 }
 
-func deleteAssistantThread(client *http.Client, sessionToken, threadID string) error {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodDelete, assistantURL+"/threads/"+threadID, nil)
-	if err != nil {
-		return err
+func parseAssistantThreadOpenStream(body, threadID string) (*threadDetail, error) {
+	frames := parseStreamFrames(body)
+
+	detail := &threadDetail{ID: threadID}
+
+	// Parse thread info
+	if threads, ok := frames["thread.json"]; ok && len(threads) > 0 {
+		var t assistantThreadPayload
+		if err := json.Unmarshal([]byte(threads[0]), &t); err == nil {
+			detail.Title = t.Title
+			detail.ID = t.ID
+		}
 	}
 
-	req.AddCookie(resolveSessionCookie(sessionToken))
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", api.DefaultUserAgent)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
+	// Parse messages
+	if msgFrames, ok := frames["message.json"]; ok {
+		for _, raw := range msgFrames {
+			var msg assistantMessagePayload
+			if err := json.Unmarshal([]byte(raw), &msg); err != nil {
+				continue
+			}
+			reply := msg.Markdown
+			if reply == "" {
+				reply = msg.Reply
+			}
+			detail.Messages = append(detail.Messages, threadDetailMessage{
+				ID:        msg.ID,
+				State:     msg.State,
+				Prompt:    msg.Prompt,
+				Reply:     reply,
+				CreatedAt: msg.CreatedAt,
+			})
+		}
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, api.MaxResponseBody))
-		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, truncateString(string(body), 200))
+	return detail, nil
+}
+
+func deleteAssistantThread(client *http.Client, sessionToken string, thread *threadDetail) error {
+	payload := map[string]any{
+		"threads": []map[string]any{
+			{
+				"id":    thread.ID,
+				"title": thread.Title,
+			},
+		},
 	}
 
-	return nil
+	_, err := executeKagiStream(client, assistantThreadDeleteURL, sessionToken, payload)
+	return err
 }

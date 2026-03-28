@@ -228,7 +228,7 @@ func TestIntegrationConfigInitExisting(t *testing.T) {
 	}
 
 	kagiDir := configDir + "/kagi"
-	os.MkdirAll(kagiDir, 0o700)                              //nolint:errcheck
+	os.MkdirAll(kagiDir, 0o700)                               //nolint:errcheck
 	os.WriteFile(kagiDir+"/config.yaml", []byte("{}"), 0o600) //nolint:errcheck
 
 	_, err = executeCommand(t, "config", "init")

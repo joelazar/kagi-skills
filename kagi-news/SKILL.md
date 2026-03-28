@@ -1,22 +1,13 @@
 ---
 name: kagi-news
-description: Browse Kagi's curated news feed with category filtering. Requires Kagi subscriber session token.
+description: Browse Kagi's curated news feed with category filtering. Uses the public news.kagi.com API.
 ---
 
 # Kagi News
 
 Browse news from Kagi's curated news feed with category filtering.
 
-Requires `KAGI_SESSION_TOKEN` environment variable.
-
-## Setup
-
-1. Log into your Kagi account
-2. Get your session token
-3. Add to your shell profile:
-   ```bash
-   export KAGI_SESSION_TOKEN="your-session-token"
-   ```
+Uses the public `news.kagi.com` API — no authentication required.
 
 ## Usage
 
@@ -24,6 +15,7 @@ Requires `KAGI_SESSION_TOKEN` environment variable.
 kagi news                                # All news
 kagi news --category technology          # Filter by category
 kagi news --category science -n 5        # Limit results
+kagi news --lang de                      # German news
 kagi news --format json                  # JSON output
 ```
 
@@ -33,6 +25,7 @@ kagi news --format json                  # JSON output
 |------|-------------|
 | `--category <cat>` | Filter: world, business, technology, science, health, sports, entertainment |
 | `-n, --num <num>` | Number of items (default: 20) |
+| `--lang <code>` | Language code, e.g., en, de, fr (default: en) |
 | `--format <fmt>` | Output format: json (default), compact, pretty |
 | `--timeout <sec>` | HTTP timeout in seconds (default: 15) |
 

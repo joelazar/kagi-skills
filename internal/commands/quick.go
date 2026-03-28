@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -16,24 +17,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const quickAnswerURL = "https://kagi.com/api/v1/quick_answer"
+const quickAnswerURL = "https://kagi.com/mother/context"
 
-type quickAnswerResponse struct {
-	Answer     string           `json:"answer"`
-	References []quickReference `json:"references,omitempty"`
-	Cached     bool             `json:"cached,omitempty"`
-}
-
-type quickReference struct {
-	Title   string `json:"title"`
-	URL     string `json:"url"`
-	Snippet string `json:"snippet,omitempty"`
+type quickMessagePayload struct {
+	ID                string   `json:"id"`
+	ThreadID          string   `json:"thread_id"`
+	CreatedAt         string   `json:"created_at,omitempty"`
+	State             string   `json:"state"`
+	Prompt            string   `json:"prompt"`
+	Reply             string   `json:"reply,omitempty"`
+	Markdown          string   `json:"md,omitempty"`
+	ReferencesMD      string   `json:"references_md,omitempty"`
+	FollowupQuestions []string `json:"followup_questions,omitempty"`
 }
 
 type quickOutput struct {
-	Query      string           `json:"query"`
-	Answer     string           `json:"answer"`
-	References []quickReference `json:"references,omitempty"`
+	Query      string `json:"query"`
+	Answer     string `json:"answer"`
+	References string `json:"references,omitempty"`
 }
 
 func newQuickCmd() *cobra.Command {
@@ -43,7 +44,7 @@ func newQuickCmd() *cobra.Command {
 		Use:   "quick <query>",
 		Short: "Get a quick answer via Kagi subscriber session",
 		Long: `Get an AI-generated quick answer using your Kagi subscriber session.
-Requires KAGI_SESSION_TOKEN (your Kagi session cookie or token URL).
+Requires KAGI_SESSION_TOKEN (your Kagi session cookie).
 
 This uses Kagi's subscriber Quick Answer feature, not the paid FastGPT API.`,
 		Example: `  kagi quick "What is the population of Tokyo?"
@@ -66,13 +67,7 @@ This uses Kagi's subscriber Quick Answer feature, not the paid FastGPT API.`,
 				return err
 			}
 
-			out := quickOutput{
-				Query:      query,
-				Answer:     resp.Answer,
-				References: resp.References,
-			}
-
-			return renderQuickOutput(out)
+			return renderQuickOutput(resp)
 		},
 	}
 
@@ -93,77 +88,101 @@ func renderQuickOutput(out quickOutput) error {
 
 	fmt.Println(out.Answer)
 
-	if len(out.References) > 0 {
+	if out.References != "" {
 		fmt.Println()
 		fmt.Println("--- References ---")
-		for i, ref := range out.References {
-			fmt.Printf("[%d] %s\n", i+1, ref.Title)
-			fmt.Printf("    %s\n", ref.URL)
-			if ref.Snippet != "" {
-				fmt.Printf("    %s\n", ref.Snippet)
-			}
-		}
+		fmt.Println(out.References)
 	}
 
 	return nil
 }
 
-func fetchQuickAnswer(client *http.Client, sessionToken, query string) (*quickAnswerResponse, error) {
+func fetchQuickAnswer(client *http.Client, sessionToken, query string) (quickOutput, error) {
 	params := url.Values{}
 	params.Set("q", query)
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, quickAnswerURL+"?"+params.Encode(), nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, quickAnswerURL+"?"+params.Encode(), bytes.NewReader([]byte{}))
 	if err != nil {
-		return nil, err
+		return quickOutput{}, err
 	}
 
-	// Session token can be a full URL or just the token value
-	token := sessionToken
-	if strings.Contains(token, "token=") {
-		if u, err := url.Parse(token); err == nil {
-			if t := u.Query().Get("token"); t != "" {
-				token = t
-			}
-		}
-	}
-
-	req.AddCookie(&http.Cookie{
-		Name:  "kagi_session",
-		Value: token,
-	})
-	req.Header.Set("Accept", "application/json")
+	req.AddCookie(resolveSessionCookie(sessionToken))
+	req.Header.Set("Accept", kagiStreamAccept)
+	req.Header.Set("Content-Length", "0")
+	req.Header.Set("Cache-Control", "no-store")
 	req.Header.Set("User-Agent", api.DefaultUserAgent)
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return quickOutput{}, err
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, api.MaxResponseBody))
 	if err != nil {
-		return nil, err
+		return quickOutput{}, err
+	}
+
+	bodyStr := string(body)
+
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+		return quickOutput{}, errors.New("invalid or expired Kagi session token")
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, truncateString(string(body), 200))
+		return quickOutput{}, fmt.Errorf("HTTP %d: %s", resp.StatusCode, truncateString(bodyStr, 200))
 	}
 
-	var out quickAnswerResponse
-	if err := json.Unmarshal(body, &out); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
+	// Check for HTML response (auth redirect)
+	trimmed := strings.TrimSpace(bodyStr)
+	if strings.HasPrefix(trimmed, "<!") || strings.HasPrefix(trimmed, "<html") {
+		return quickOutput{}, errors.New("invalid or expired Kagi session token")
 	}
 
-	if out.Answer == "" {
-		return nil, errors.New("empty response from Quick Answer")
-	}
-
-	return &out, nil
+	return parseQuickAnswerStream(bodyStr, query)
 }
 
-func truncateString(s string, maxLen int) string { //nolint:unparam // generic helper
-	if len(s) <= maxLen {
-		return s
+func parseQuickAnswerStream(body, query string) (quickOutput, error) {
+	frames := parseStreamFrames(body)
+
+	// Check for errors first
+	if _, ok := frames["unauthorized"]; ok {
+		return quickOutput{}, errors.New("invalid or expired Kagi session token")
 	}
-	return s[:maxLen] + "..."
+	if notices, ok := frames["limit_notice.html"]; ok && len(notices) > 0 {
+		return quickOutput{}, fmt.Errorf("kagi quick answer unavailable: %s", notices[0])
+	}
+
+	// Parse message
+	msgFrames, ok := frames["new_message.json"]
+	if !ok || len(msgFrames) == 0 {
+		return quickOutput{}, errors.New("quick answer response did not include a new_message.json frame")
+	}
+
+	var msg quickMessagePayload
+	if err := json.Unmarshal([]byte(msgFrames[0]), &msg); err != nil {
+		return quickOutput{}, fmt.Errorf("failed to parse quick answer message: %w", err)
+	}
+
+	if msg.State == "error" {
+		errText := msg.Markdown
+		if errText == "" {
+			errText = msg.Reply
+		}
+		if errText == "" {
+			errText = "Kagi Quick Answer returned an error"
+		}
+		return quickOutput{}, errors.New(errText)
+	}
+
+	answer := msg.Markdown
+	if answer == "" {
+		answer = msg.Reply
+	}
+
+	return quickOutput{
+		Query:      query,
+		Answer:     answer,
+		References: msg.ReferencesMD,
+	}, nil
 }

@@ -1,13 +1,8 @@
 package commands
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"strings"
 	"time"
 
@@ -16,23 +11,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const askPageURL = "https://kagi.com/api/v1/ask_page"
-
-type askPageRequest struct {
-	URL      string `json:"url"`
-	Question string `json:"question"`
-}
-
-type askPageResponse struct {
-	Answer     string               `json:"answer"`
-	References []assistantReference `json:"references,omitempty"`
-}
-
 type askPageOutput struct {
-	URL        string               `json:"url"`
-	Question   string               `json:"question"`
-	Answer     string               `json:"answer"`
-	References []assistantReference `json:"references,omitempty"`
+	URL        string `json:"url"`
+	Question   string `json:"question"`
+	Answer     string `json:"answer"`
+	ThreadID   string `json:"thread_id,omitempty"`
+	References string `json:"references,omitempty"`
 }
 
 func newAskPageCmd() *cobra.Command {
@@ -40,17 +24,19 @@ func newAskPageCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "askpage <url> <question>",
-		Short: "Ask a question about a specific URL",
-		Long: `Ask a question about the content of a specific URL using Kagi's AI.
-Requires KAGI_SESSION_TOKEN (your Kagi session cookie or token URL).`,
-		Example: `  kagi askpage https://golang.org/doc/go1.22 "What are the new features?"
-  kagi askpage https://arxiv.org/abs/1706.03762 "Summarize the main contribution" --format json`,
+		Short: "Ask a question about a web page",
+		Long: `Ask a question about a specific web page using Kagi Assistant.
+Requires KAGI_SESSION_TOKEN (your Kagi session cookie).
+
+The question is answered using the content of the provided URL as context.`,
+		Example: `  kagi askpage https://go.dev/doc/effective_go "What are the naming conventions?"
+  kagi askpage https://example.com/article "Summarize the key points" --format json`,
 		Args: cobra.MinimumNArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
-			targetURL := strings.TrimSpace(args[0])
+			pageURL := strings.TrimSpace(args[0])
 			question := strings.TrimSpace(strings.Join(args[1:], " "))
 
-			if targetURL == "" {
+			if pageURL == "" {
 				return errors.New("URL is required")
 			}
 			if question == "" {
@@ -62,16 +48,20 @@ Requires KAGI_SESSION_TOKEN (your Kagi session cookie or token URL).`,
 				return err
 			}
 
+			// Build the prompt: URL + newline + question (same as Rust CLI)
+			prompt := pageURL + "\n" + question
+
 			client := api.NewHTTPClient(time.Duration(timeoutSec) * time.Second)
-			resp, err := callAskPage(client, sessionToken, targetURL, question)
+			resp, err := callAssistantPrompt(client, sessionToken, prompt, "")
 			if err != nil {
 				return err
 			}
 
 			out := askPageOutput{
-				URL:        targetURL,
+				URL:        pageURL,
 				Question:   question,
-				Answer:     resp.Answer,
+				Answer:     resp.Output,
+				ThreadID:   resp.ThreadID,
 				References: resp.References,
 			}
 
@@ -96,61 +86,15 @@ func renderAskPageOutput(out askPageOutput) error {
 
 	fmt.Println(out.Answer)
 
-	if len(out.References) > 0 {
+	if out.References != "" {
 		fmt.Println()
 		fmt.Println("--- References ---")
-		for i, ref := range out.References {
-			fmt.Printf("[%d] %s\n    %s\n", i+1, ref.Title, ref.URL)
-		}
+		fmt.Println(out.References)
+	}
+
+	if out.ThreadID != "" {
+		fmt.Fprintf(output.Stderr(), "[thread: %s]\n", out.ThreadID)
 	}
 
 	return nil
-}
-
-func callAskPage(client *http.Client, sessionToken, targetURL, question string) (*askPageResponse, error) {
-	reqBody := askPageRequest{
-		URL:      targetURL,
-		Question: question,
-	}
-
-	bodyBytes, err := json.Marshal(reqBody)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, askPageURL, bytes.NewReader(bodyBytes))
-	if err != nil {
-		return nil, err
-	}
-
-	req.AddCookie(resolveSessionCookie(sessionToken))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", api.DefaultUserAgent)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, api.MaxResponseBody))
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, truncateString(string(body), 200))
-	}
-
-	var out askPageResponse
-	if err := json.Unmarshal(body, &out); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	if out.Answer == "" {
-		return nil, errors.New("empty response from Ask Page")
-	}
-
-	return &out, nil
 }

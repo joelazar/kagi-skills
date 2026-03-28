@@ -423,3 +423,10 @@ func truncateRunes(s string, limit int) string {
 	}
 	return string(r[:limit])
 }
+
+func truncateString(s string, maxLen int) string { //nolint:unparam // generic helper
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
+}
