@@ -179,6 +179,10 @@ func parseQuickAnswerStream(body, query string) (quickOutput, error) {
 	if answer == "" {
 		answer = msg.Reply
 	}
+	// Fall back to accumulated tokens.json content
+	if answer == "" {
+		answer = accumulateTokens(frames)
+	}
 
 	return quickOutput{
 		Query:      query,

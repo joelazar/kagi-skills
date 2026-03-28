@@ -506,9 +506,36 @@ func parseAssistantMessage(frames map[string][]string, resp *assistantPromptResp
 	if resp.Output == "" {
 		resp.Output = msg.Reply
 	}
+
+	// If both md and reply are empty, accumulate from tokens.json frames
+	if resp.Output == "" {
+		resp.Output = accumulateTokens(frames)
+	}
+
 	resp.References = msg.ReferencesMD
 
 	return nil
+}
+
+// accumulateTokens extracts accumulated HTML content from tokens.json frames.
+// The last tokens.json frame contains the full accumulated HTML.
+func accumulateTokens(frames map[string][]string) string {
+	tokenFrames, ok := frames["tokens.json"]
+	if !ok || len(tokenFrames) == 0 {
+		return ""
+	}
+
+	// The last tokens.json frame should have the full accumulated content
+	last := tokenFrames[len(tokenFrames)-1]
+
+	var token struct {
+		Text string `json:"text"`
+	}
+	if err := json.Unmarshal([]byte(last), &token); err != nil {
+		return ""
+	}
+
+	return token.Text
 }
 
 func listAssistantThreads(client *http.Client, sessionToken string) ([]threadSummary, error) {
