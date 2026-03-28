@@ -2,15 +2,23 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"os"
 
+	"charm.land/fang/v2"
 	"github.com/joelazar/kagi/internal/commands"
+	"github.com/joelazar/kagi/internal/version"
 )
 
 func main() {
-	if err := commands.NewRootCmd().Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
+	rootCmd := commands.NewRootCmd()
+
+	if err := fang.Execute(
+		context.Background(),
+		rootCmd,
+		fang.WithVersion(version.Version),
+		fang.WithNotifySignal(os.Interrupt),
+	); err != nil {
 		os.Exit(1)
 	}
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/joelazar/kagi/internal/config"
 	"github.com/joelazar/kagi/internal/output"
 	"github.com/joelazar/kagi/internal/tui"
-	"github.com/joelazar/kagi/internal/version"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -24,10 +23,16 @@ var (
 // NewRootCmd creates the root cobra command.
 func NewRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use:     "kagi",
-		Short:   "Kagi CLI — search, summarize, and more from the terminal",
-		Long:    "A unified CLI for all Kagi APIs: search, FastGPT, summarizer, enrichment, and more.",
-		Version: version.Version,
+		Use:   "kagi",
+		Short: "Kagi CLI — search, summarize, and more from the terminal",
+		Long:  "A unified CLI for all Kagi APIs: search, FastGPT, summarizer, enrichment, and more.",
+		Example: `  kagi search "golang generics"
+  kagi fastgpt "What is the capital of France?"
+  kagi summarize https://example.com/article
+  kagi enrich web "independent blogs"
+  kagi translate "Hello world" --target German
+  kagi news --category tech
+  kagi balance`,
 		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
 			var err error
 			cfg, err = config.Load()
@@ -44,8 +49,6 @@ func NewRootCmd() *cobra.Command {
 			executor := tui.NewExecutor(cfg)
 			return tui.Run(executor)
 		},
-		SilenceUsage:  true,
-		SilenceErrors: true,
 	}
 
 	rootCmd.PersistentFlags().StringVar(&formatFlag, "format", "json",
