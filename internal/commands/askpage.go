@@ -84,12 +84,16 @@ func renderAskPageOutput(out askPageOutput) error {
 		return output.WriteCompact(out)
 	}
 
-	fmt.Println(out.Answer)
+	text := htmlToMarkdown(out.Answer)
+	fmt.Println(text)
 
 	if out.References != "" {
-		fmt.Println()
-		fmt.Println("--- References ---")
-		fmt.Println(out.References)
+		refs := htmlToMarkdown(out.References)
+		if refs != "" {
+			fmt.Println()
+			fmt.Println("--- References ---")
+			fmt.Println(refs)
+		}
 	}
 
 	if out.ThreadID != "" {

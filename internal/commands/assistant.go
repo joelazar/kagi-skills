@@ -310,12 +310,17 @@ func renderAssistantOutput(out assistantOutput) error {
 		return output.WriteCompact(out)
 	}
 
-	fmt.Println(out.Output)
+	// Convert HTML to readable text for terminal output
+	text := htmlToMarkdown(out.Output)
+	fmt.Println(text)
 
 	if out.References != "" {
-		fmt.Println()
-		fmt.Println("--- References ---")
-		fmt.Println(out.References)
+		refs := htmlToMarkdown(out.References)
+		if refs != "" {
+			fmt.Println()
+			fmt.Println("--- References ---")
+			fmt.Println(refs)
+		}
 	}
 
 	if out.ThreadID != "" {
