@@ -1,30 +1,25 @@
-SKILLS := kagi-search kagi-fastgpt kagi-summarizer kagi-enrich
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+LDFLAGS := -ldflags "-X github.com/joelazar/kagi/internal/version.Version=$(VERSION)"
 
-.PHONY: build lint test fmt clean
+.PHONY: build test lint fmt clean install
 
 build:
-	@set -e; \
-	for s in $(SKILLS); do \
-		echo "=== $$s ==="; \
-		(cd $$s && go build -o .bin/$$s .); \
-	done
-
-lint:
-	@set -e; \
-	for s in $(SKILLS); do \
-		echo "=== $$s ==="; \
-		(cd $$s && golangci-lint run --config ../.golangci.yml); \
-	done
+	go build $(LDFLAGS) -o bin/kagi ./cmd/kagi
 
 test:
-	@set -e; \
-	for s in $(SKILLS); do \
-		echo "=== $$s ==="; \
-		(cd $$s && go test ./...); \
-	done
+	go test ./...
+
+test-integration:
+	go test -tags integration ./...
+
+lint:
+	golangci-lint run
 
 fmt:
 	gofumpt -w -l .
 
 clean:
-	@for s in $(SKILLS); do rm -f $$s/.bin/$$s; done
+	rm -rf bin/
+
+install:
+	go install $(LDFLAGS) ./cmd/kagi
