@@ -62,3 +62,8 @@ func WriteCompactTo(w io.Writer, v any) error {
 	enc := json.NewEncoder(w)
 	return enc.Encode(v)
 }
+
+// Stderr returns os.Stderr. Convenience for commands that print status to stderr.
+func Stderr() io.Writer {
+	return os.Stderr
+}

@@ -44,6 +44,13 @@ func NewRootCmd() *cobra.Command {
 		newSummarizeCmd(),
 		newEnrichCmd(),
 		newBalanceCmd(),
+		newSmallWebCmd(),
+		newBatchCmd(),
+		newQuickCmd(),
+		newAssistantCmd(),
+		newAskPageCmd(),
+		newTranslateCmd(),
+		newNewsCmd(),
 	)
 
 	return rootCmd

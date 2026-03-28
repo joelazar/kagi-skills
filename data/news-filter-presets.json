@@ -1,0 +1,34 @@
+{
+  "presets": [
+    {
+      "id": "no-politics",
+      "name": "No Politics",
+      "description": "Filter out political news",
+      "exclude_categories": ["politics"]
+    },
+    {
+      "id": "tech-only",
+      "name": "Technology Only",
+      "description": "Show only technology news",
+      "include_categories": ["technology"]
+    },
+    {
+      "id": "science-tech",
+      "name": "Science & Technology",
+      "description": "Science and technology news",
+      "include_categories": ["science", "technology"]
+    },
+    {
+      "id": "world-business",
+      "name": "World & Business",
+      "description": "World affairs and business news",
+      "include_categories": ["world", "business"]
+    },
+    {
+      "id": "no-sports",
+      "name": "No Sports",
+      "description": "Filter out sports news",
+      "exclude_categories": ["sports"]
+    }
+  ]
+}
