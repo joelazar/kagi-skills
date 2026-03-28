@@ -71,6 +71,7 @@ func NewRootCmd() *cobra.Command {
 		newNewsCmd(),
 		newVersionCmd(),
 		newCompletionCmd(),
+		newAuthCmd(),
 	)
 
 	return rootCmd
