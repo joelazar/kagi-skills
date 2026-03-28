@@ -70,6 +70,7 @@ func NewRootCmd() *cobra.Command {
 		newTranslateCmd(),
 		newNewsCmd(),
 		newVersionCmd(),
+		newCompletionCmd(),
 	)
 
 	return rootCmd
