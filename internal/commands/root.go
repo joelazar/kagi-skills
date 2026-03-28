@@ -69,6 +69,7 @@ func NewRootCmd() *cobra.Command {
 		newAskPageCmd(),
 		newTranslateCmd(),
 		newNewsCmd(),
+		newVersionCmd(),
 	)
 
 	return rootCmd
