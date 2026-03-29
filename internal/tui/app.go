@@ -252,7 +252,7 @@ func (a App) handleMenuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return a.executeCommand(item.Name, nil)
 		}
 		a.state = StateInput
-		a.input = NewInputModel(item.Name, item.Fields, a.layoutWidth())
+		a.input = NewInputModel(item.Name, item.Hint, item.Fields, a.layoutWidth())
 		return a, nil
 	}
 

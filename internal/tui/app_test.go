@@ -127,7 +127,7 @@ func TestErrorBackToInputWhenCommandHasFields(t *testing.T) {
 	app := newTestApp(nil)
 	app.state = StateError
 	app.selectedCommand = Command{Name: "search", Fields: []InputField{{Key: "query", Label: "Query", Required: true}}}
-	app.input = NewInputModel("search", app.selectedCommand.Fields, 80)
+	app.input = NewInputModel("search", "", app.selectedCommand.Fields, 80)
 	app.errorMsg = "test error"
 
 	m, _ := sendSpecialKey(app, tea.KeyEnter)
@@ -184,7 +184,7 @@ func TestResultsBackToInputWhenCommandHasFields(t *testing.T) {
 	app := newTestApp(nil)
 	app.state = StateResults
 	app.selectedCommand = Command{Name: "search", Fields: []InputField{{Key: "query", Label: "Query", Required: true}}}
-	app.input = NewInputModel("search", app.selectedCommand.Fields, 80)
+	app.input = NewInputModel("search", "", app.selectedCommand.Fields, 80)
 	app.results = newResultList("test", nil, 80, 20)
 
 	m, _ := sendSpecialKey(app, tea.KeyEscape)
@@ -228,7 +228,7 @@ func TestInputValidation(t *testing.T) {
 		{Key: "query", Label: "Query", Required: true},
 		{Key: "limit", Label: "Limit", Required: false},
 	}
-	input := NewInputModel("search", fields, 80)
+	input := NewInputModel("search", "", fields, 80)
 
 	// Should fail with empty required field.
 	if input.Validate() {
@@ -284,7 +284,7 @@ func TestViewRendering(t *testing.T) {
 		case StateMenu:
 			// Already set up.
 		case StateInput:
-			app.input = NewInputModel("test", []InputField{{Key: "q", Label: "Q"}}, 80)
+			app.input = NewInputModel("test", "", []InputField{{Key: "q", Label: "Q"}}, 80)
 		case StateLoading:
 			// No setup needed.
 		case StateResults:

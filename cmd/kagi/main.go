@@ -7,6 +7,7 @@ import (
 
 	"charm.land/fang/v2"
 	"github.com/joelazar/kagi/internal/commands"
+	kagistyle "github.com/joelazar/kagi/internal/style"
 	"github.com/joelazar/kagi/internal/version"
 )
 
@@ -17,6 +18,7 @@ func main() {
 		context.Background(),
 		rootCmd,
 		fang.WithVersion(version.Version),
+		fang.WithColorSchemeFunc(kagistyle.FangColorScheme),
 		fang.WithNotifySignal(os.Interrupt),
 	); err != nil {
 		os.Exit(1)

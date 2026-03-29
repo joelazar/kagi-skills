@@ -1,24 +1,27 @@
 // Package tui provides an interactive terminal UI for the Kagi CLI.
 package tui
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"github.com/charmbracelet/lipgloss"
+	kagistyle "github.com/joelazar/kagi/internal/style"
+)
 
-// Theme colors — uses adaptive colors that work on both light and dark terminals.
+// Theme colors — uses a Kagi-inspired adaptive palette that works on both light and dark terminals.
 var (
 	// ColorPrimary is the main accent color.
-	ColorPrimary = lipgloss.AdaptiveColor{Light: "#5A4FCF", Dark: "#8B7FFF"}
+	ColorPrimary = lipgloss.AdaptiveColor{Light: kagistyle.PurpleLight, Dark: kagistyle.PurpleDark}
 	// ColorSecondary is used for URLs and success states.
-	ColorSecondary = lipgloss.AdaptiveColor{Light: "#2B8A6F", Dark: "#5FD7A7"}
+	ColorSecondary = lipgloss.AdaptiveColor{Light: kagistyle.TealLight, Dark: kagistyle.TealDark}
 	// ColorMuted is for dimmed/help text.
-	ColorMuted = lipgloss.AdaptiveColor{Light: "#888888", Dark: "#666666"}
+	ColorMuted = lipgloss.AdaptiveColor{Light: kagistyle.MutedLight, Dark: kagistyle.MutedDark}
 	// ColorError is for error messages.
-	ColorError = lipgloss.AdaptiveColor{Light: "#CC3333", Dark: "#FF6666"}
+	ColorError = lipgloss.AdaptiveColor{Light: kagistyle.ErrorLight, Dark: kagistyle.ErrorDark}
 	// ColorHighlight is for prominent text.
-	ColorHighlight = lipgloss.AdaptiveColor{Light: "#1A1A1A", Dark: "#FFFFFF"}
+	ColorHighlight = lipgloss.AdaptiveColor{Light: kagistyle.InkLight, Dark: kagistyle.InkDark}
 	// ColorBorder is for container borders.
-	ColorBorder = lipgloss.AdaptiveColor{Light: "#DDDDDD", Dark: "#444444"}
+	ColorBorder = lipgloss.AdaptiveColor{Light: kagistyle.BorderLight, Dark: kagistyle.BorderDark}
 	// ColorBg is the status bar background.
-	ColorBg = lipgloss.AdaptiveColor{Light: "#F5F5F5", Dark: "#1E1E2E"}
+	ColorBg = lipgloss.AdaptiveColor{Light: kagistyle.PanelLight, Dark: kagistyle.PanelDark}
 )
 
 // Shared styles used across TUI components.
