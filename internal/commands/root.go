@@ -27,13 +27,13 @@ func NewRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "kagi",
 		Short: "Kagi CLI — search, summarize, and more from the terminal",
-		Long:  "A unified CLI for all Kagi APIs: search, FastGPT, summarizer, enrichment, and more.",
+		Long:  "A unified CLI for Kagi search, summarization, enrichment, subscriber tools, and public feeds.",
 		Example: `  kagi search "golang generics"
   kagi fastgpt "What is the capital of France?"
   kagi summarize https://example.com/article
   kagi enrich web "independent blogs"
-  kagi translate "Hello world" --target German
-  kagi news --category tech
+  kagi translate --to de "Hello world"
+  kagi news --category technology
   kagi balance`,
 		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
 			var err error
@@ -54,12 +54,12 @@ func NewRootCmd() *cobra.Command {
 	}
 
 	rootCmd.PersistentFlags().StringVar(&formatFlag, "format", "json",
-		fmt.Sprintf("output format (%s)", "json, compact, pretty, markdown, csv"))
-	rootCmd.Flags().BoolVarP(&interactiveF, "interactive", "i", false, "launch interactive TUI mode")
-	rootCmd.Flags().BoolVar(&altScreenFlag, "alt-screen", false, "use Bubble Tea's alternate screen buffer for the TUI")
+		fmt.Sprintf("output format (%s; support varies by command)", "json, compact, pretty, markdown, csv"))
+	rootCmd.Flags().BoolVarP(&interactiveF, "interactive", "i", false, "launch the interactive TUI")
+	rootCmd.Flags().BoolVar(&altScreenFlag, "alt-screen", false, "use Bubble Tea's alternate screen buffer in the TUI")
 	rootCmd.Flags().BoolVar(&altScreenFlag, "fullscreen", false, "deprecated alias for --alt-screen")
-	rootCmd.Flags().BoolVar(&compactFlag, "compact", false, "use a narrower, shorter interactive layout")
-	rootCmd.Flags().BoolVar(&noTUIFlag, "no-tui", false, "force non-interactive mode (useful in pipes)")
+	rootCmd.Flags().BoolVar(&compactFlag, "compact", false, "use a narrower, shorter TUI layout")
+	rootCmd.Flags().BoolVar(&noTUIFlag, "no-tui", false, "disable the TUI and require an explicit subcommand")
 	_ = rootCmd.Flags().MarkDeprecated("fullscreen", "use --alt-screen instead")
 
 	rootCmd.AddCommand(

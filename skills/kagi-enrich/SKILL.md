@@ -108,14 +108,14 @@ The enrichment indexes are intentionally niche — they may return fewer results
 ### Option A — Install from source (requires Go 1.26+)
 
 ```bash
-cd {baseDir}/.. && go install -ldflags "-X github.com/joelazar/kagi/internal/version.Version=$(git describe --tags --always)" ./cmd/kagi
+cd {baseDir}/../.. && go install -ldflags "-X github.com/joelazar/kagi/internal/version.Version=$(git describe --tags --always)" ./cmd/kagi
 ```
 
 ### Option B — Build locally
 
 ```bash
-cd {baseDir}/.. && make build
-# Binary at {baseDir}/../bin/kagi
+cd {baseDir}/../.. && mise run build
+# Binary at {baseDir}/../../bin/kagi
 ```
 
 The binary has no external dependencies beyond the Go standard library and cobra.

@@ -7,10 +7,11 @@ internal/config/           # YAML config loading
 internal/commands/         # Cobra commands (search, fastgpt, summarize, enrich, balance)
 internal/output/           # Output formatting (JSON, compact, pretty, markdown, CSV)
 internal/version/          # Build-time version injection
-kagi-search/SKILL.md       # Skill definitions (reference `kagi <subcommand>`)
-kagi-fastgpt/SKILL.md
-kagi-summarizer/SKILL.md
-kagi-enrich/SKILL.md
+skills/                    # Skill definitions (reference `kagi <subcommand>`)
+  kagi-search/SKILL.md
+  kagi-fastgpt/SKILL.md
+  kagi-summarizer/SKILL.md
+  kagi-enrich/SKILL.md
 ```
 
 Tasks are defined in `.mise.toml` and run via `mise run`:

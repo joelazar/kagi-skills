@@ -54,8 +54,8 @@ type enrichOutput struct {
 func newEnrichCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "enrich",
-		Short: "Search Kagi's non-commercial web and news indexes",
-		Long:  "Search Kagi's Teclis (web) and TinyGem (news) enrichment indexes for independent content.",
+		Short: "Search Kagi's enrichment indexes",
+		Long:  "Search Kagi's Teclis (web) and TinyGem (news) indexes for independent web content and non-mainstream news.",
 	}
 
 	cmd.AddCommand(newEnrichSubCmd("web", enrichWebURL, "Teclis — non-commercial, independent web content"))
@@ -128,7 +128,7 @@ func newEnrichSubCmd(index, endpoint, description string) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVarP(&limit, "num", "n", 0, "max number of results (0 = all)")
+	cmd.Flags().IntVarP(&limit, "num", "n", 0, "maximum number of results (0 = all)")
 	cmd.Flags().BoolVar(&showBalance, "show-balance", false, "print API balance to stderr")
 	cmd.Flags().IntVar(&timeoutSec, "timeout", 15, "HTTP timeout in seconds")
 

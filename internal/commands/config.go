@@ -28,7 +28,7 @@ func newConfigInitCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Create a configuration file interactively",
+		Short: "Create a config file interactively",
 		Long: `Create a Kagi CLI configuration file with guided prompts.
 
 The config file is created at ~/.config/kagi/config.yaml.
@@ -47,7 +47,7 @@ Get your API key at: https://kagi.com/settings/api`,
 func newConfigPathCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "path",
-		Short: "Show configuration file path",
+		Short: "Print the config file path",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			configDir, err := os.UserConfigDir()

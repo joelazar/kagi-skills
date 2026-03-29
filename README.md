@@ -47,11 +47,11 @@ One key works for all four tools.
 2. Symlink the skill(s) into your agent's skills directory (see [Agent Integration](#agent-integration) below)
 3. On first run, the wrapper auto-builds from source if Go is available. Otherwise it prompts you to confirm downloading a pre-built binary from GitHub releases
 
-Each tool's full usage is documented in its `SKILL.md`.
+Each tool's full usage is documented in `skills/*/SKILL.md`.
 
 ## Agent Integration
 
-Each skill folder contains a `SKILL.md` that agents read to understand how to invoke the tool. Symlink or copy the skill folder into your agent's skills directory, then install the binary inside it.
+Each skill folder lives under `skills/` and contains a `SKILL.md` that agents read to understand how to invoke the tool. Symlink or copy the skill folder into your agent's skills directory, then install the binary inside it.
 
 ### [Pi](https://github.com/mariozechner/pi) / [Gemini CLI](https://github.com/google-gemini/gemini-cli) / [Codex](https://github.com/openai/codex) / other agents
 
@@ -59,10 +59,10 @@ Default skills directory: `~/.agents/skills/`
 
 ```bash
 # bash/zsh
-for skill in kagi-*; do ln -s "$(pwd)/$skill" ~/.agents/skills/"$skill"; done
+for skill in skills/kagi-*; do ln -s "$(pwd)/$skill" ~/.agents/skills/"$(basename "$skill")"; done
 
 # fish
-for skill in kagi-*; ln -s (pwd)/$skill ~/.agents/skills/$skill; end
+for skill in skills/kagi-*; ln -s (pwd)/$skill ~/.agents/skills/(basename $skill); end
 ```
 
 ### [Claude Code](https://github.com/anthropics/claude-code)
@@ -71,10 +71,10 @@ Default skills directory: `~/.claude/skills/`
 
 ```bash
 # bash/zsh
-for skill in kagi-*; do ln -s "$(pwd)/$skill" ~/.claude/skills/"$skill"; done
+for skill in skills/kagi-*; do ln -s "$(pwd)/$skill" ~/.claude/skills/"$(basename "$skill")"; done
 
 # fish
-for skill in kagi-*; ln -s (pwd)/$skill ~/.claude/skills/$skill; end
+for skill in skills/kagi-*; ln -s (pwd)/$skill ~/.claude/skills/(basename $skill); end
 ```
 
 The binaries speak plain text and JSON (`--json` flag). No special integration is needed beyond dropping the skill folder in the right place.

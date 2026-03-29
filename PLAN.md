@@ -70,16 +70,17 @@ Rewrite the multi-binary `kagi-skills` repo into a single `kagi` CLI binary with
 │   └── workflows/
 │       ├── ci.yml
 │       └── release.yml          # Milestone 5
-├── kagi-search/SKILL.md         # Updated skill definitions → call `kagi search`
-├── kagi-fastgpt/SKILL.md
-├── kagi-summarizer/SKILL.md
-├── kagi-enrich/SKILL.md
-├── kagi-assistant/SKILL.md      # New
-├── kagi-translate/SKILL.md      # New
-├── kagi-news/SKILL.md           # New
-├── kagi-askpage/SKILL.md        # New
-├── kagi-quick/SKILL.md          # New
-├── kagi-smallweb/SKILL.md       # New
+├── skills/
+│   ├── kagi-search/SKILL.md     # Updated skill definitions → call `kagi search`
+│   ├── kagi-fastgpt/SKILL.md
+│   ├── kagi-summarizer/SKILL.md
+│   ├── kagi-enrich/SKILL.md
+│   ├── kagi-assistant/SKILL.md  # New
+│   ├── kagi-translate/SKILL.md  # New
+│   ├── kagi-news/SKILL.md       # New
+│   ├── kagi-askpage/SKILL.md    # New
+│   ├── kagi-quick/SKILL.md      # New
+│   └── kagi-smallweb/SKILL.md   # New
 ├── PLAN.md
 ├── CHANGELOG.md
 ├── README.md

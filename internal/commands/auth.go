@@ -27,9 +27,9 @@ func newAuthCmd() *cobra.Command {
 func newAuthCheckCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "check",
-		Short: "Validate API credentials",
-		Long: `Validate that your Kagi API key (and optionally session token) are configured
-and working. Makes a minimal API call to verify each credential.`,
+		Short: "Validate API key configuration",
+		Long: `Validate that your Kagi API key is configured and working.
+Also reports whether a Kagi session token is configured for subscriber features.`,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return runAuthCheck()
@@ -61,7 +61,7 @@ func runAuthCheck() error {
 	if err != nil {
 		fmt.Println("- Session token: not configured (optional, needed for subscriber features)")
 	} else {
-		fmt.Printf("✓ Session token: found (%s…)\n", maskKey(sessionToken))
+		fmt.Printf("✓ Session token: configured (%s…)\n", maskKey(sessionToken))
 	}
 
 	return nil

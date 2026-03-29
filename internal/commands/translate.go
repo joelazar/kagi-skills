@@ -49,7 +49,7 @@ func newTranslateCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "translate <text>",
-		Short: "Translate text via Kagi Translate",
+		Short: "Translate text with Kagi Translate",
 		Long: `Translate text using Kagi's translation service.
 Requires KAGI_SESSION_TOKEN (your Kagi session cookie).
 
@@ -95,9 +95,9 @@ Text can be provided as arguments or piped via stdin.`,
 		},
 	}
 
-	cmd.Flags().StringVar(&sourceLang, "from", "auto", "source language code (auto-detect if omitted)")
-	cmd.Flags().StringVar(&targetLang, "to", "", "target language code (required)")
-	cmd.Flags().StringVar(&formality, "formality", "", "formality level: formal, informal")
+	cmd.Flags().StringVar(&sourceLang, "from", "auto", "source language code (default: auto-detect)")
+	cmd.Flags().StringVar(&targetLang, "to", "", "target language code")
+	cmd.Flags().StringVar(&formality, "formality", "", "formality level: formal or informal")
 	cmd.Flags().IntVar(&timeoutSec, "timeout", 30, "HTTP timeout in seconds")
 
 	_ = cmd.MarkFlagRequired("to")

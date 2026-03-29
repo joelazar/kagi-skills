@@ -89,8 +89,8 @@ func newSearchCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "search <query>",
-		Short: "Search the web via Kagi Search API",
-		Long:  "Search the web using Kagi's Search API (Teclis) with content extraction support.",
+		Short: "Search the web with Kagi Search",
+		Long:  "Search the web using Kagi's Search API, with optional readable page-content extraction.",
 		Example: `  kagi search "golang generics"
   kagi search "rust async" -n 5 --content
   kagi search "latest news" --format json`,
@@ -161,10 +161,10 @@ func newSearchCmd() *cobra.Command {
 	}
 
 	cmd.Flags().IntVarP(&limit, "num", "n", 10, "number of results (max 100)")
-	cmd.Flags().BoolVar(&fetchContent, "content", false, "fetch readable page content")
+	cmd.Flags().BoolVar(&fetchContent, "content", false, "fetch readable content for each result")
 	cmd.Flags().BoolVar(&showBalance, "show-balance", false, "print API balance to stderr")
 	cmd.Flags().IntVar(&timeoutSec, "timeout", 15, "HTTP timeout in seconds")
-	cmd.Flags().IntVar(&maxContentChars, "max-content-chars", 5000, "max chars per fetched content")
+	cmd.Flags().IntVar(&maxContentChars, "max-content-chars", 5000, "max characters of fetched content per result")
 
 	cmd.AddCommand(newContentCmd())
 
@@ -179,7 +179,7 @@ func newContentCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "content <url>",
-		Short: "Extract readable content from a URL",
+		Short: "Extract readable page content from a URL",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			targetURL := strings.TrimSpace(args[0])
@@ -219,7 +219,7 @@ func newContentCmd() *cobra.Command {
 	}
 
 	cmd.Flags().IntVar(&timeoutSec, "timeout", 20, "HTTP timeout in seconds")
-	cmd.Flags().IntVar(&maxChars, "max-chars", 20000, "max chars to output")
+	cmd.Flags().IntVar(&maxChars, "max-chars", 20000, "max characters to output")
 
 	return cmd
 }

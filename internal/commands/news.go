@@ -78,12 +78,12 @@ func newNewsCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "news",
-		Short: "Browse Kagi news feed",
-		Long: `Browse news from Kagi's curated news feed with category filtering.
+		Short: "Browse Kagi's curated news feed",
+		Long: `Browse news from Kagi's curated news feed, with optional category filtering.
 
 This uses the public news.kagi.com API and does not require authentication.
 
-Categories: world, business, technology, science, health, sports, entertainment`,
+Common categories: world, business, technology, science, health, sports, entertainment`,
 		Example: `  kagi news
   kagi news --category technology
   kagi news --category science -n 5
@@ -105,8 +105,8 @@ Categories: world, business, technology, science, health, sports, entertainment`
 		},
 	}
 
-	cmd.Flags().StringVar(&category, "category", "", "news category (e.g., technology, science, world)")
-	cmd.Flags().IntVarP(&limit, "num", "n", 20, "number of items")
+	cmd.Flags().StringVar(&category, "category", "", "news category name or slug (for example: technology, science, world)")
+	cmd.Flags().IntVarP(&limit, "num", "n", 20, "maximum number of items")
 	cmd.Flags().StringVar(&lang, "lang", "en", "language code (e.g., en, de, fr)")
 	cmd.Flags().IntVar(&timeoutSec, "timeout", 15, "HTTP timeout in seconds")
 

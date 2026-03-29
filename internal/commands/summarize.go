@@ -73,9 +73,9 @@ func newSummarizeCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "summarize [url]",
-		Short: "Summarize a URL or text via Kagi Universal Summarizer",
+		Short: "Summarize a URL or text with Kagi Summarizer",
 		Long: `Summarize any URL or text using Kagi's Universal Summarizer API.
-Supports multiple engines and output types. Text can be provided via --text flag or stdin.`,
+Supports multiple engines and summary types. Text can be provided with --text or via stdin.`,
 		Example: `  kagi summarize https://en.wikipedia.org/wiki/Go_(programming_language)
   kagi summarize https://arxiv.org/abs/1706.03762 --engine muriel --type takeaway
   kagi summarize --text "Long article text here..." --format json
@@ -165,9 +165,9 @@ Supports multiple engines and output types. Text can be provided via --text flag
 	}
 
 	cmd.Flags().StringVar(&inputText, "text", "", "summarize raw text instead of a URL")
-	cmd.Flags().StringVar(&engine, "engine", "", "summarization engine: cecil (default), agnes, daphne, muriel")
-	cmd.Flags().StringVar(&summType, "type", "", "output type: summary (default), takeaway")
-	cmd.Flags().StringVar(&targetLang, "lang", "", "target language code (e.g. EN, DE, FR, JA)")
+	cmd.Flags().StringVar(&engine, "engine", "", "summarizer engine: cecil (default), agnes, daphne, muriel")
+	cmd.Flags().StringVar(&summType, "type", "", "summary type: summary (default), takeaway")
+	cmd.Flags().StringVar(&targetLang, "lang", "", "output language code (for example: EN, DE, FR, JA)")
 	cmd.Flags().BoolVar(&noCache, "no-cache", false, "bypass cached responses")
 	cmd.Flags().BoolVar(&showBalance, "show-balance", false, "print API balance to stderr")
 	cmd.Flags().IntVar(&timeoutSec, "timeout", 120, "HTTP timeout in seconds")

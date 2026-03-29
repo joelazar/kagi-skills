@@ -104,7 +104,7 @@ This is a free API endpoint — no API key or subscription required.`,
 		},
 	}
 
-	cmd.Flags().IntVarP(&limit, "num", "n", 20, "number of entries to fetch")
+	cmd.Flags().IntVarP(&limit, "num", "n", 20, "maximum number of entries to fetch")
 	cmd.Flags().IntVar(&timeoutSec, "timeout", 15, "HTTP timeout in seconds")
 
 	return cmd
