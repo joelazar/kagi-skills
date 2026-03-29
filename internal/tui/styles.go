@@ -68,6 +68,10 @@ var (
 	HelpStyle = lipgloss.NewStyle().
 			Foreground(ColorMuted)
 
+	// FooterStatusStyle is for the status text rendered beside the adaptive help view.
+	FooterStatusStyle = lipgloss.NewStyle().
+				Foreground(ColorMuted)
+
 	// BorderedStyle is for bordered containers in detail views.
 	BorderedStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).

@@ -23,7 +23,7 @@ func (r ResultItem) FilterValue() string { return r.Title + " " + r.Description 
 type resultDelegate struct{}
 
 func (d resultDelegate) Height() int                             { return 3 }
-func (d resultDelegate) Spacing() int                            { return 1 }
+func (d resultDelegate) Spacing() int                            { return 0 }
 func (d resultDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 
 func (d resultDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
@@ -70,7 +70,8 @@ func newResultList(title string, items []ResultItem, width, height int) list.Mod
 	l := list.New(listItems, resultDelegate{}, width, height)
 	l.Title = title
 	l.Styles.Title = TitleStyle
-	l.SetShowStatusBar(true)
+	l.SetShowStatusBar(false)
+	l.SetShowPagination(false)
 	l.SetFilteringEnabled(true)
 	l.SetShowHelp(false)
 

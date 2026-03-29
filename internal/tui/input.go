@@ -115,8 +115,6 @@ func (m *InputModel) View() string {
 		sb.WriteString(DimStyle.Render("Fill in required fields (*)"))
 	}
 
-	sb.WriteString("\n" + DimStyle.Render("esc: back  •  tab: next field  •  enter: submit"))
-
 	return sb.String()
 }
 

@@ -8,10 +8,12 @@ import (
 	"strings"
 
 	"github.com/atotto/clipboard"
+	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // AppState represents the current state of the TUI.
@@ -54,6 +56,7 @@ type App struct {
 	results  list.Model
 	detail   DetailModel
 	spinner  spinner.Model
+	help     help.Model
 	executor CommandExecutor
 
 	selectedCommand Command
@@ -63,6 +66,12 @@ type App struct {
 	height          int
 }
 
+// RunOptions controls how the TUI is presented.
+type RunOptions struct {
+	// AltScreen enables Bubble Tea's alternate screen buffer.
+	AltScreen bool
+}
+
 // NewApp creates a new TUI application.
 func NewApp(executor CommandExecutor) App {
 	s := spinner.New()
@@ -70,11 +79,20 @@ func NewApp(executor CommandExecutor) App {
 	s.Style = SpinnerStyle
 
 	keys := DefaultKeyMap()
+	h := help.New()
+	h.Styles.ShortKey = lipgloss.NewStyle().Foreground(ColorPrimary)
+	h.Styles.ShortDesc = lipgloss.NewStyle().Foreground(ColorMuted)
+	h.Styles.ShortSeparator = lipgloss.NewStyle().Foreground(ColorMuted)
+	h.Styles.FullKey = lipgloss.NewStyle().Foreground(ColorPrimary)
+	h.Styles.FullDesc = lipgloss.NewStyle().Foreground(ColorMuted)
+	h.Styles.FullSeparator = lipgloss.NewStyle().Foreground(ColorMuted)
+	h.Styles.Ellipsis = lipgloss.NewStyle().Foreground(ColorMuted)
 
 	return App{
 		state:    StateMenu,
 		keys:     keys,
 		spinner:  s,
+		help:     h,
 		executor: executor,
 		width:    80,
 		height:   24,
@@ -137,9 +155,8 @@ func (a App) View() string {
 		content = a.errorView()
 	}
 
-	// Append status message if any.
-	if a.statusMsg != "" {
-		content += "\n" + HelpStyle.Render(a.statusMsg)
+	if footer := a.footerView(); footer != "" {
+		content += "\n" + footer
 	}
 
 	return content
@@ -150,12 +167,22 @@ func (a App) State() AppState {
 	return a.state
 }
 
-// Run starts the TUI application.
+// Run starts the TUI application with the default presentation settings.
 func Run(executor CommandExecutor) error {
+	return RunWithOptions(executor, RunOptions{})
+}
+
+// RunWithOptions starts the TUI application with explicit presentation options.
+func RunWithOptions(executor CommandExecutor, opts RunOptions) error {
 	app := NewApp(executor)
 	app.menu = newMenuList(app.width, app.height-2)
 
-	p := tea.NewProgram(app, tea.WithAltScreen())
+	programOpts := []tea.ProgramOption{}
+	if opts.AltScreen {
+		programOpts = append(programOpts, tea.WithAltScreen())
+	}
+
+	p := tea.NewProgram(app, programOpts...)
 	_, err := p.Run()
 	return err
 }
@@ -202,6 +229,7 @@ func (a App) handleMenuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 		a.selectedCommand = item
+		a.statusMsg = ""
 		if len(item.Fields) == 0 {
 			// No input needed, execute directly.
 			return a.executeCommand(item.Name, nil)
@@ -219,6 +247,7 @@ func (a App) handleMenuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (a App) handleInputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, a.keys.Back):
+		a.statusMsg = ""
 		a.state = StateMenu
 		return a, nil
 
@@ -238,7 +267,8 @@ func (a App) handleInputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (a App) handleResultsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, a.keys.Back):
-		a.state = StateMenu
+		a.statusMsg = ""
+		a.goBackToPrevious()
 		return a, nil
 
 	case key.Matches(msg, a.keys.Enter), key.Matches(msg, a.keys.Right):
@@ -246,6 +276,7 @@ func (a App) handleResultsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if !ok {
 			return a, nil
 		}
+		a.statusMsg = ""
 		a.state = StateDetail
 		a.detail = NewDetailModel(item, a.width, a.height)
 		return a, nil
@@ -279,6 +310,7 @@ func (a App) handleResultsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (a App) handleDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, a.keys.Back), key.Matches(msg, a.keys.Left):
+		a.statusMsg = ""
 		a.state = StateResults
 		return a, nil
 
@@ -308,13 +340,16 @@ func (a App) handleDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (a App) handleErrorKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if key.Matches(msg, a.keys.Back) || key.Matches(msg, a.keys.Enter) {
-		a.state = StateMenu
+		a.statusMsg = ""
+		a.goBackToPrevious()
 		return a, nil
 	}
 	return a, nil
 }
 
 func (a *App) handleCommandResult(msg commandResultMsg) {
+	a.statusMsg = ""
+
 	if msg.err != nil {
 		a.state = StateError
 		a.errorMsg = msg.err.Error()
@@ -368,14 +403,165 @@ func (a App) loadingView() string {
 		"\n  %s Running %s...\n\n  %s",
 		a.spinner.View(),
 		SelectedItemStyle.Render(a.selectedCommand.Name),
-		DimStyle.Render("Press Ctrl+C to cancel"),
+		DimStyle.Render("Waiting for the API response"),
 	)
 }
 
 func (a App) errorView() string {
 	return "\n" + ErrorStyle.Render("  Error") + "\n\n" +
-		"  " + a.errorMsg + "\n\n" +
-		DimStyle.Render("  Press Enter or Esc to go back")
+		"  " + a.errorMsg
+}
+
+func (a App) footerView() string {
+	width := a.width
+	if width <= 0 {
+		width = 80
+	}
+
+	status := a.footerStatus()
+	bindings := a.footerHelpBindings()
+	if status == "" && len(bindings.short) == 0 && len(bindings.full) == 0 {
+		return ""
+	}
+
+	innerWidth := max(width-2, 20)
+	parts := make([]string, 0, 2)
+	availableHelpWidth := innerWidth
+
+	if status != "" {
+		maxStatusWidth := max((innerWidth*2)/3, 18)
+		statusRendered := FooterStatusStyle.MaxWidth(maxStatusWidth).Render(status)
+		parts = append(parts, statusRendered)
+		availableHelpWidth = max(innerWidth-lipgloss.Width(statusRendered)-2, 0)
+	}
+
+	helpView := ""
+	if len(bindings.short) > 0 || len(bindings.full) > 0 {
+		h := a.help
+		h.Width = availableHelpWidth
+		helpView = h.View(bindings)
+		if helpView != "" {
+			if len(parts) > 0 {
+				parts = append(parts, "  ")
+			}
+			parts = append(parts, helpView)
+		}
+	}
+
+	if len(parts) == 0 {
+		return ""
+	}
+
+	return StatusBarStyle.Width(width).Render(lipgloss.JoinHorizontal(lipgloss.Top, parts...))
+}
+
+func (a App) footerStatus() string {
+	left := ""
+
+	switch a.state {
+	case StateMenu:
+		left = a.listStatus(a.menu, "command")
+	case StateInput:
+		left = fmt.Sprintf("%s input", a.selectedCommand.Name)
+	case StateLoading:
+		left = fmt.Sprintf("Running %s", a.selectedCommand.Name)
+	case StateResults:
+		left = a.listStatus(a.results, "result")
+	case StateDetail:
+		left = strings.TrimSpace(a.detail.title + "  •  " + a.detail.scrollInfo())
+	case StateError:
+		left = "Request failed"
+	}
+
+	if a.statusMsg != "" {
+		left = strings.TrimSpace(left + "  •  " + a.statusMsg)
+	}
+
+	return left
+}
+
+type helpBindings struct {
+	short []key.Binding
+	full  [][]key.Binding
+}
+
+func newHelpBindings(short []key.Binding, full [][]key.Binding) helpBindings {
+	return helpBindings{short: short, full: full}
+}
+
+func (h helpBindings) ShortHelp() []key.Binding { return h.short }
+
+func (h helpBindings) FullHelp() [][]key.Binding { return h.full }
+
+func (a App) footerHelpBindings() helpBindings {
+	switch a.state {
+	case StateMenu:
+		return newHelpBindings(
+			[]key.Binding{a.keys.Enter, a.keys.Search, a.keys.Up, a.keys.Down, a.keys.Quit},
+			[][]key.Binding{{a.keys.Enter, a.keys.Search, a.keys.Up, a.keys.Down}, {a.keys.Quit}},
+		)
+	case StateInput:
+		return newHelpBindings(
+			[]key.Binding{a.keys.Back, a.keys.Tab, a.keys.Enter},
+			[][]key.Binding{{a.keys.Back, a.keys.Tab, a.keys.Enter}},
+		)
+	case StateLoading:
+		return newHelpBindings(
+			[]key.Binding{a.keys.Quit},
+			[][]key.Binding{{a.keys.Quit}},
+		)
+	case StateResults:
+		return newHelpBindings(
+			[]key.Binding{a.keys.Enter, a.keys.Search, a.keys.Open, a.keys.Yank, a.keys.Back},
+			[][]key.Binding{{a.keys.Enter, a.keys.Search, a.keys.Back}, {a.keys.Open, a.keys.Yank, a.keys.Up, a.keys.Down}},
+		)
+	case StateDetail:
+		return newHelpBindings(
+			[]key.Binding{a.keys.Back, a.keys.Open, a.keys.Yank, a.keys.Up, a.keys.Down},
+			[][]key.Binding{{a.keys.Back, a.keys.Open, a.keys.Yank}, {a.keys.Up, a.keys.Down, a.keys.PageUp, a.keys.PageDown}},
+		)
+	case StateError:
+		return newHelpBindings(
+			[]key.Binding{a.keys.Enter, a.keys.Back},
+			[][]key.Binding{{a.keys.Enter, a.keys.Back}},
+		)
+	default:
+		return helpBindings{}
+	}
+}
+
+func (a App) listStatus(m list.Model, noun string) string {
+	shown := len(m.VisibleItems())
+	total := len(m.Items())
+	if total == 0 {
+		return fmt.Sprintf("No %ss", noun)
+	}
+	if m.IsFiltered() || m.SettingFilter() {
+		filter := m.FilterValue()
+		if filter == "" {
+			return fmt.Sprintf("Showing %d of %d %ss", shown, total, noun)
+		}
+		return fmt.Sprintf("Showing %d of %d %ss  •  filter: %q", shown, total, noun, filter)
+	}
+	if shown == 1 {
+		return fmt.Sprintf("1 %s", noun)
+	}
+	return fmt.Sprintf("%d %ss", shown, noun)
+}
+
+func (a App) backTargetLabel() string {
+	if len(a.selectedCommand.Fields) > 0 {
+		return "edit query"
+	}
+	return "commands"
+}
+
+func (a *App) goBackToPrevious() {
+	if len(a.selectedCommand.Fields) > 0 {
+		a.state = StateInput
+		return
+	}
+	a.state = StateMenu
 }
 
 // openBrowser opens a URL in the default browser.

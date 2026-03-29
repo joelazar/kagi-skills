@@ -14,10 +14,11 @@ import (
 )
 
 var (
-	formatFlag   string
-	interactiveF bool
-	noTUIFlag    bool
-	cfg          *config.Config
+	formatFlag    string
+	interactiveF  bool
+	noTUIFlag     bool
+	altScreenFlag bool
+	cfg           *config.Config
 )
 
 // NewRootCmd creates the root cobra command.
@@ -47,14 +48,17 @@ func NewRootCmd() *cobra.Command {
 				return errors.New("no command specified. Run 'kagi --help' for usage")
 			}
 			executor := tui.NewExecutor(cfg)
-			return tui.Run(executor)
+			return tui.RunWithOptions(executor, tui.RunOptions{AltScreen: altScreenFlag})
 		},
 	}
 
 	rootCmd.PersistentFlags().StringVar(&formatFlag, "format", "json",
 		fmt.Sprintf("output format (%s)", "json, compact, pretty, markdown, csv"))
 	rootCmd.Flags().BoolVarP(&interactiveF, "interactive", "i", false, "launch interactive TUI mode")
+	rootCmd.Flags().BoolVar(&altScreenFlag, "alt-screen", false, "use Bubble Tea's alternate screen buffer for the TUI")
+	rootCmd.Flags().BoolVar(&altScreenFlag, "fullscreen", false, "deprecated alias for --alt-screen")
 	rootCmd.Flags().BoolVar(&noTUIFlag, "no-tui", false, "force non-interactive mode (useful in pipes)")
+	_ = rootCmd.Flags().MarkDeprecated("fullscreen", "use --alt-screen instead")
 
 	rootCmd.AddCommand(
 		newSearchCmd(),

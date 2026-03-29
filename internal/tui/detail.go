@@ -6,7 +6,6 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
-	"github.com/charmbracelet/lipgloss"
 )
 
 // DetailModel displays a detailed view of a result with markdown rendering.
@@ -54,9 +53,7 @@ func (m *DetailModel) View() string {
 		header += "\n" + URLStyle.Render(m.url)
 	}
 
-	footer := m.footerView()
-
-	return fmt.Sprintf("%s\n%s\n%s", header, m.viewport.View(), footer)
+	return fmt.Sprintf("%s\n%s", header, m.viewport.View())
 }
 
 // SetSize updates the viewport dimensions.
@@ -67,12 +64,8 @@ func (m *DetailModel) SetSize(width, height int) {
 	m.viewport.Height = height - 4
 }
 
-func (m *DetailModel) footerView() string {
-	percent := fmt.Sprintf(" %3.f%% ", m.viewport.ScrollPercent()*100)
-	info := lipgloss.NewStyle().Foreground(ColorMuted).Render(percent)
-	help := DimStyle.Render("esc: back  •  o: open  •  y: copy URL  •  ↑↓/jk: scroll")
-
-	return StatusBarStyle.Width(m.width).Render(help + "  " + info)
+func (m *DetailModel) scrollInfo() string {
+	return fmt.Sprintf("%3.f%%", m.viewport.ScrollPercent()*100)
 }
 
 // renderMarkdown renders markdown content using glamour.

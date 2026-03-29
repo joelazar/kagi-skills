@@ -2,6 +2,7 @@ package tui
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -118,6 +119,21 @@ func TestErrorBackToMenu(t *testing.T) {
 	}
 }
 
+func TestErrorBackToInputWhenCommandHasFields(t *testing.T) {
+	app := newTestApp(nil)
+	app.state = StateError
+	app.selectedCommand = Command{Name: "search", Fields: []InputField{{Key: "query", Label: "Query", Required: true}}}
+	app.input = NewInputModel("search", app.selectedCommand.Fields, 80)
+	app.errorMsg = "test error"
+
+	m, _ := sendSpecialKey(app, tea.KeyEnter)
+	a := mustApp(t, m)
+
+	if a.State() != StateInput {
+		t.Errorf("expected StateInput after enter in error state, got %v", a.State())
+	}
+}
+
 func TestResultsToDetail(t *testing.T) {
 	items := []ResultItem{
 		{Title: "Test", URL: "https://example.com", Description: "desc", Detail: "# Detail"},
@@ -160,6 +176,21 @@ func TestResultsBackToMenu(t *testing.T) {
 	}
 }
 
+func TestResultsBackToInputWhenCommandHasFields(t *testing.T) {
+	app := newTestApp(nil)
+	app.state = StateResults
+	app.selectedCommand = Command{Name: "search", Fields: []InputField{{Key: "query", Label: "Query", Required: true}}}
+	app.input = NewInputModel("search", app.selectedCommand.Fields, 80)
+	app.results = newResultList("test", nil, 80, 20)
+
+	m, _ := sendSpecialKey(app, tea.KeyEscape)
+	a := mustApp(t, m)
+
+	if a.State() != StateInput {
+		t.Errorf("expected StateInput after esc in results, got %v", a.State())
+	}
+}
+
 func TestWindowResize(t *testing.T) {
 	app := newTestApp(nil)
 
@@ -199,6 +230,25 @@ func TestMenuCommandsExist(t *testing.T) {
 			t.Errorf("duplicate command name: %s", cmd.Name)
 		}
 		names[cmd.Name] = true
+	}
+}
+
+func TestFooterShowsFilterStatus(t *testing.T) {
+	app := newTestApp(nil)
+	app.menu.SetFilterText("search")
+
+	view := app.View()
+	if !strings.Contains(view, "filter:") {
+		t.Fatalf("expected footer to show active filter status, got %q", view)
+	}
+}
+
+func TestFooterShowsAdaptiveHelp(t *testing.T) {
+	app := newTestApp(nil)
+
+	view := app.View()
+	if !strings.Contains(view, "enter") {
+		t.Fatalf("expected footer to include adaptive help, got %q", view)
 	}
 }
 

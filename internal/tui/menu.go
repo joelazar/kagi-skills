@@ -24,7 +24,7 @@ func (c Command) FilterValue() string { return c.Name }
 type commandDelegate struct{}
 
 func (d commandDelegate) Height() int                             { return 2 }
-func (d commandDelegate) Spacing() int                            { return 1 }
+func (d commandDelegate) Spacing() int                            { return 0 }
 func (d commandDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 
 func (d commandDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
@@ -134,7 +134,8 @@ func newMenuList(width, height int) list.Model {
 	l := list.New(items, commandDelegate{}, width, height)
 	l.Title = "Kagi CLI"
 	l.Styles.Title = TitleStyle
-	l.SetShowStatusBar(true)
+	l.SetShowStatusBar(false)
+	l.SetShowPagination(false)
 	l.SetFilteringEnabled(true)
 	l.SetShowHelp(false)
 
