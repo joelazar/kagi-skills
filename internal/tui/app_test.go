@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -73,6 +74,25 @@ func TestInputBack(t *testing.T) {
 
 	if a.State() != StateMenu {
 		t.Errorf("expected StateMenu after esc, got %v", a.State())
+	}
+}
+
+func TestQuestionMarkInInputDoesNotToggleHelp(t *testing.T) {
+	app := newTestApp(nil)
+	m, _ := sendSpecialKey(app, tea.KeyEnter)
+	a := mustApp(t, m)
+	if a.State() != StateInput {
+		t.Fatalf("expected StateInput, got %v", a.State())
+	}
+
+	m, _ = a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'?'}})
+	a = mustApp(t, m)
+
+	if a.help.ShowAll {
+		t.Fatal("expected ? in input mode to be treated as text, not help toggle")
+	}
+	if got := a.input.inputs[0].Value(); got != "?" {
+		t.Fatalf("expected first input to contain ?, got %q", got)
 	}
 }
 
@@ -270,6 +290,64 @@ func TestFooterShowsAdaptiveHelp(t *testing.T) {
 	view := app.View()
 	if !strings.Contains(view, "enter") {
 		t.Fatalf("expected footer to include adaptive help, got %q", view)
+	}
+}
+
+func TestHelpKeyTogglesExpandedFooter(t *testing.T) {
+	app := newTestApp(nil)
+	app.state = StateDetail
+	app.detail = NewDetailModel(ResultItem{Title: "Test", Detail: "# Heading\n\nContent"}, 80, 24)
+
+	m, _ := app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'?'}})
+	a := mustApp(t, m)
+
+	if !a.help.ShowAll {
+		t.Fatal("expected full help to be enabled after pressing ?")
+	}
+	if !strings.Contains(a.View(), "pgup") {
+		t.Fatalf("expected expanded help to include page navigation, got %q", a.View())
+	}
+}
+
+func TestExpandedHelpReservesVerticalSpace(t *testing.T) {
+	app := newTestApp(nil)
+	app.state = StateResults
+	app.results = newResultList("test", []ResultItem{{Title: "One"}}, 80, 20)
+	app.width = 80
+	app.height = 24
+
+	baseline := app.listHeight()
+
+	m, _ := app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'?'}})
+	a := mustApp(t, m)
+
+	if got := a.listHeight(); got >= baseline {
+		t.Fatalf("expected expanded help to reduce list height, baseline=%d got=%d", baseline, got)
+	}
+}
+
+func TestContextualBackHelpTargetsForm(t *testing.T) {
+	app := newTestApp(nil)
+	app.state = StateResults
+	app.selectedCommand = Command{Name: "search", Fields: []InputField{{Key: "query", Label: "Query", Required: true}}}
+	app.input = NewInputModel("search", "", app.selectedCommand.Fields, 80)
+	app.results = newResultList("test", []ResultItem{{Title: "One"}}, 80, 20)
+
+	view := app.View()
+	if !strings.Contains(view, "form") {
+		t.Fatalf("expected footer help to mention returning to the form, got %q", view)
+	}
+}
+
+func TestLoadingViewShowsElapsedTime(t *testing.T) {
+	app := newTestApp(nil)
+	app.state = StateLoading
+	app.selectedCommand = Command{Name: "search"}
+	app.loadingStarted = time.Now().Add(-1500 * time.Millisecond)
+
+	view := app.View()
+	if !strings.Contains(view, "Elapsed:") {
+		t.Fatalf("expected loading view to show elapsed time, got %q", view)
 	}
 }
 

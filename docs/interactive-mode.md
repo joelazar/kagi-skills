@@ -3,6 +3,23 @@
 This project's Bubble Tea interface is intentionally **not** a 1:1 flag mirror of the raw CLI.
 It aims for strong command coverage while keeping the interaction model compact and practical.
 
+## Presentation and Navigation
+
+Interactive mode now defaults to an inline layout rather than always taking over the terminal's alternate screen.
+
+Use these presentation options when you want a different feel:
+
+- default: inline Bubble Tea view in the main terminal buffer
+- `--alt-screen`: opt into Bubble Tea's alternate screen buffer
+- `--compact`: cap the rendered width and list/detail heights for a lighter-weight feel
+
+Navigation/help affordances are also intentionally adaptive:
+
+- `?` toggles expanded key help in the footer outside of active text-entry forms
+- back/escape hints are contextual (`back to form` vs `back to commands`)
+- loading states show elapsed time so long-running requests feel less opaque
+- expanded help automatically gives list/detail views a little less vertical space so the footer remains visible on smaller terminals
+
 ## Command Coverage
 
 Interactive mode currently exposes these workflows:

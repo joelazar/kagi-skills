@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/help"
@@ -63,6 +64,7 @@ type App struct {
 	selectedCommand Command
 	errorMsg        string
 	statusMsg       string
+	loadingStarted  time.Time
 	width           int
 	height          int
 }
@@ -141,6 +143,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case tea.KeyMsg:
+		if a.state != StateInput && key.Matches(msg, a.keys.Help) {
+			a.help.ShowAll = !a.help.ShowAll
+			a.handleResize()
+			return a, nil
+		}
 		// Global quit.
 		if key.Matches(msg, a.keys.Quit) && a.state != StateInput {
 			return a, tea.Quit
@@ -366,6 +373,7 @@ func (a App) handleErrorKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (a *App) handleCommandResult(msg commandResultMsg) {
 	a.statusMsg = ""
+	a.loadingStarted = time.Time{}
 
 	if msg.err != nil {
 		a.state = StateError
@@ -386,6 +394,7 @@ func (a *App) handleCommandResult(msg commandResultMsg) {
 
 func (a App) executeCommand(command string, inputs map[string]string) (tea.Model, tea.Cmd) {
 	a.state = StateLoading
+	a.loadingStarted = time.Now()
 	return a, tea.Batch(
 		a.spinner.Tick,
 		func() tea.Msg {
@@ -416,11 +425,17 @@ func (a App) updateCurrent(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (a App) loadingView() string {
+	status := DimStyle.Render("Waiting for the API response")
+	if elapsed := a.loadingElapsed(); elapsed != "" {
+		status = DimStyle.Render("Elapsed: " + elapsed + "  •  Network request in progress")
+	}
+
 	return fmt.Sprintf(
-		"\n  %s Running %s...\n\n  %s",
+		"\n  %s Running %s...\n\n  %s\n  %s",
 		a.spinner.View(),
 		SelectedItemStyle.Render(a.selectedCommand.Name),
-		DimStyle.Render("Waiting for the API response"),
+		status,
+		DimStyle.Render("Press q to quit if you want to cancel the interactive session"),
 	)
 }
 
@@ -445,7 +460,7 @@ func (a App) listHeight() int {
 	if height <= 0 {
 		height = 24
 	}
-	listHeight := max(height-2, 5)
+	listHeight := max(height-2-a.extraFooterLines(), 5)
 	if a.compact {
 		listHeight = min(listHeight, compactMaxListHeight)
 	}
@@ -457,6 +472,7 @@ func (a App) detailHeight() int {
 	if height <= 0 {
 		height = 24
 	}
+	height = max(height-a.extraFooterLines(), 8)
 	if a.compact {
 		height = min(height, compactMaxDetailHeight)
 	}
@@ -513,6 +529,9 @@ func (a App) footerStatus() string {
 		left = fmt.Sprintf("%s input", a.selectedCommand.Name)
 	case StateLoading:
 		left = fmt.Sprintf("Running %s", a.selectedCommand.Name)
+		if elapsed := a.loadingElapsed(); elapsed != "" {
+			left = left + "  •  " + elapsed
+		}
 	case StateResults:
 		left = a.listStatus(a.results, "result")
 	case StateDetail:
@@ -542,36 +561,39 @@ func (h helpBindings) ShortHelp() []key.Binding { return h.short }
 func (h helpBindings) FullHelp() [][]key.Binding { return h.full }
 
 func (a App) footerHelpBindings() helpBindings {
+	back := a.contextualBackBinding()
+	helpToggle := a.contextualHelpBinding()
+
 	switch a.state {
 	case StateMenu:
 		return newHelpBindings(
-			[]key.Binding{a.keys.Enter, a.keys.Search, a.keys.Up, a.keys.Down, a.keys.Quit},
-			[][]key.Binding{{a.keys.Enter, a.keys.Search, a.keys.Up, a.keys.Down}, {a.keys.Quit}},
+			[]key.Binding{a.keys.Enter, a.keys.Search, a.keys.Up, a.keys.Down, helpToggle, a.keys.Quit},
+			[][]key.Binding{{a.keys.Enter, a.keys.Search, a.keys.Up, a.keys.Down}, {helpToggle, a.keys.Quit}},
 		)
 	case StateInput:
 		return newHelpBindings(
-			[]key.Binding{a.keys.Back, a.keys.Tab, a.keys.Enter},
-			[][]key.Binding{{a.keys.Back, a.keys.Tab, a.keys.Enter}},
+			[]key.Binding{back, a.keys.Tab, a.keys.Enter},
+			[][]key.Binding{{back, a.keys.Tab, a.keys.Enter}},
 		)
 	case StateLoading:
 		return newHelpBindings(
-			[]key.Binding{a.keys.Quit},
-			[][]key.Binding{{a.keys.Quit}},
+			[]key.Binding{helpToggle, a.keys.Quit},
+			[][]key.Binding{{helpToggle, a.keys.Quit}},
 		)
 	case StateResults:
 		return newHelpBindings(
-			[]key.Binding{a.keys.Enter, a.keys.Search, a.keys.Open, a.keys.Yank, a.keys.Back},
-			[][]key.Binding{{a.keys.Enter, a.keys.Search, a.keys.Back}, {a.keys.Open, a.keys.Yank, a.keys.Up, a.keys.Down}},
+			[]key.Binding{a.keys.Enter, a.keys.Search, a.keys.Open, a.keys.Yank, back, helpToggle},
+			[][]key.Binding{{a.keys.Enter, a.keys.Search, back}, {a.keys.Open, a.keys.Yank, a.keys.Up, a.keys.Down}, {helpToggle}},
 		)
 	case StateDetail:
 		return newHelpBindings(
-			[]key.Binding{a.keys.Back, a.keys.Open, a.keys.Yank, a.keys.Up, a.keys.Down},
-			[][]key.Binding{{a.keys.Back, a.keys.Open, a.keys.Yank}, {a.keys.Up, a.keys.Down, a.keys.PageUp, a.keys.PageDown}},
+			[]key.Binding{back, a.keys.Open, a.keys.Yank, a.keys.Up, a.keys.Down, helpToggle},
+			[][]key.Binding{{back, a.keys.Open, a.keys.Yank}, {a.keys.Up, a.keys.Down, a.keys.PageUp, a.keys.PageDown}, {helpToggle}},
 		)
 	case StateError:
 		return newHelpBindings(
-			[]key.Binding{a.keys.Enter, a.keys.Back},
-			[][]key.Binding{{a.keys.Enter, a.keys.Back}},
+			[]key.Binding{a.keys.Enter, back, helpToggle},
+			[][]key.Binding{{a.keys.Enter, back}, {helpToggle}},
 		)
 	default:
 		return helpBindings{}
@@ -599,9 +621,50 @@ func (a App) listStatus(m list.Model, noun string) string {
 
 func (a App) backTargetLabel() string {
 	if len(a.selectedCommand.Fields) > 0 {
-		return "edit query"
+		return "form"
 	}
 	return "commands"
+}
+
+func (a App) contextualBackBinding() key.Binding {
+	binding := a.keys.Back
+	helpText := a.keys.Back.Help()
+	binding.SetHelp(helpText.Key, a.backTargetLabel())
+	return binding
+}
+
+func (a App) contextualHelpBinding() key.Binding {
+	binding := a.keys.Help
+	helpText := a.keys.Help.Help()
+	desc := "more"
+	if a.help.ShowAll {
+		desc = "less"
+	}
+	binding.SetHelp(helpText.Key, desc)
+	return binding
+}
+
+func (a App) loadingElapsed() string {
+	if a.loadingStarted.IsZero() {
+		return ""
+	}
+	elapsed := time.Since(a.loadingStarted)
+	if elapsed < time.Second {
+		return "<1s"
+	}
+	return elapsed.Truncate(time.Second).String()
+}
+
+func (a App) extraFooterLines() int {
+	footer := a.footerView()
+	if footer == "" {
+		return 0
+	}
+	lines := lipgloss.Height(footer)
+	if lines <= 1 {
+		return 0
+	}
+	return lines - 1
 }
 
 func (a *App) goBackToPrevious() {
