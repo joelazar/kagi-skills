@@ -16,8 +16,12 @@ func mockExecutor(items []ResultItem, err error) CommandExecutor {
 }
 
 func newTestApp(executor CommandExecutor) App {
-	app := NewApp(executor)
-	app.menu = newMenuList(80, 22)
+	return newTestAppWithOptions(executor, RunOptions{})
+}
+
+func newTestAppWithOptions(executor CommandExecutor, opts RunOptions) App {
+	app := NewAppWithOptions(executor, opts)
+	app.menu = newMenuList(app.layoutWidth(), app.listHeight())
 	return app
 }
 
@@ -199,6 +203,23 @@ func TestWindowResize(t *testing.T) {
 
 	if a.width != 120 || a.height != 40 {
 		t.Errorf("expected 120x40, got %dx%d", a.width, a.height)
+	}
+}
+
+func TestCompactLayoutCapsDimensions(t *testing.T) {
+	app := newTestAppWithOptions(nil, RunOptions{Compact: true})
+
+	m, _ := app.Update(tea.WindowSizeMsg{Width: 160, Height: 50})
+	a := mustApp(t, m)
+
+	if got := a.layoutWidth(); got != compactMaxWidth {
+		t.Fatalf("expected compact width %d, got %d", compactMaxWidth, got)
+	}
+	if got := a.listHeight(); got != compactMaxListHeight {
+		t.Fatalf("expected compact list height %d, got %d", compactMaxListHeight, got)
+	}
+	if got := a.detailHeight(); got != compactMaxDetailHeight {
+		t.Fatalf("expected compact detail height %d, got %d", compactMaxDetailHeight, got)
 	}
 }
 

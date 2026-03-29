@@ -18,6 +18,7 @@ var (
 	interactiveF  bool
 	noTUIFlag     bool
 	altScreenFlag bool
+	compactFlag   bool
 	cfg           *config.Config
 )
 
@@ -48,7 +49,7 @@ func NewRootCmd() *cobra.Command {
 				return errors.New("no command specified. Run 'kagi --help' for usage")
 			}
 			executor := tui.NewExecutor(cfg)
-			return tui.RunWithOptions(executor, tui.RunOptions{AltScreen: altScreenFlag})
+			return tui.RunWithOptions(executor, tui.RunOptions{AltScreen: altScreenFlag, Compact: compactFlag})
 		},
 	}
 
@@ -57,6 +58,7 @@ func NewRootCmd() *cobra.Command {
 	rootCmd.Flags().BoolVarP(&interactiveF, "interactive", "i", false, "launch interactive TUI mode")
 	rootCmd.Flags().BoolVar(&altScreenFlag, "alt-screen", false, "use Bubble Tea's alternate screen buffer for the TUI")
 	rootCmd.Flags().BoolVar(&altScreenFlag, "fullscreen", false, "deprecated alias for --alt-screen")
+	rootCmd.Flags().BoolVar(&compactFlag, "compact", false, "use a narrower, shorter interactive layout")
 	rootCmd.Flags().BoolVar(&noTUIFlag, "no-tui", false, "force non-interactive mode (useful in pipes)")
 	_ = rootCmd.Flags().MarkDeprecated("fullscreen", "use --alt-screen instead")
 

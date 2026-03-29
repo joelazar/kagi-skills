@@ -58,6 +58,7 @@ type App struct {
 	spinner  spinner.Model
 	help     help.Model
 	executor CommandExecutor
+	compact  bool
 
 	selectedCommand Command
 	errorMsg        string
@@ -70,10 +71,23 @@ type App struct {
 type RunOptions struct {
 	// AltScreen enables Bubble Tea's alternate screen buffer.
 	AltScreen bool
+	// Compact enables a narrower, shorter layout that feels less full-screen.
+	Compact bool
 }
+
+const (
+	compactMaxWidth        = 88
+	compactMaxListHeight   = 14
+	compactMaxDetailHeight = 18
+)
 
 // NewApp creates a new TUI application.
 func NewApp(executor CommandExecutor) App {
+	return NewAppWithOptions(executor, RunOptions{})
+}
+
+// NewAppWithOptions creates a new TUI application with explicit run options.
+func NewAppWithOptions(executor CommandExecutor, opts RunOptions) App {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = SpinnerStyle
@@ -94,6 +108,7 @@ func NewApp(executor CommandExecutor) App {
 		spinner:  s,
 		help:     h,
 		executor: executor,
+		compact:  opts.Compact,
 		width:    80,
 		height:   24,
 	}
@@ -174,8 +189,8 @@ func Run(executor CommandExecutor) error {
 
 // RunWithOptions starts the TUI application with explicit presentation options.
 func RunWithOptions(executor CommandExecutor, opts RunOptions) error {
-	app := NewApp(executor)
-	app.menu = newMenuList(app.width, app.height-2)
+	app := NewAppWithOptions(executor, opts)
+	app.menu = newMenuList(app.layoutWidth(), app.listHeight())
 
 	programOpts := []tea.ProgramOption{}
 	if opts.AltScreen {
@@ -188,17 +203,19 @@ func RunWithOptions(executor CommandExecutor, opts RunOptions) error {
 }
 
 func (a *App) handleResize() {
-	menuHeight := max(a.height-2, 5)
+	layoutWidth := a.layoutWidth()
+	listHeight := a.listHeight()
+	detailHeight := a.detailHeight()
 
 	switch a.state {
 	case StateMenu:
-		a.menu.SetSize(a.width, menuHeight)
+		a.menu.SetSize(layoutWidth, listHeight)
 	case StateInput:
-		a.input.SetWidth(a.width)
+		a.input.SetWidth(layoutWidth)
 	case StateResults:
-		a.results.SetSize(a.width, menuHeight)
+		a.results.SetSize(layoutWidth, listHeight)
 	case StateDetail:
-		a.detail.SetSize(a.width, a.height)
+		a.detail.SetSize(layoutWidth, detailHeight)
 	case StateLoading, StateError:
 		// No resize handling needed.
 	}
@@ -235,7 +252,7 @@ func (a App) handleMenuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return a.executeCommand(item.Name, nil)
 		}
 		a.state = StateInput
-		a.input = NewInputModel(item.Name, item.Fields, a.width)
+		a.input = NewInputModel(item.Name, item.Fields, a.layoutWidth())
 		return a, nil
 	}
 
@@ -278,7 +295,7 @@ func (a App) handleResultsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		a.statusMsg = ""
 		a.state = StateDetail
-		a.detail = NewDetailModel(item, a.width, a.height)
+		a.detail = NewDetailModel(item, a.layoutWidth(), a.detailHeight())
 		return a, nil
 
 	case key.Matches(msg, a.keys.Open):
@@ -364,7 +381,7 @@ func (a *App) handleCommandResult(msg commandResultMsg) {
 
 	a.state = StateResults
 	title := a.selectedCommand.Name + " results"
-	a.results = newResultList(title, msg.items, a.width, a.height-2)
+	a.results = newResultList(title, msg.items, a.layoutWidth(), a.listHeight())
 }
 
 func (a App) executeCommand(command string, inputs map[string]string) (tea.Model, tea.Cmd) {
@@ -412,11 +429,42 @@ func (a App) errorView() string {
 		"  " + a.errorMsg
 }
 
-func (a App) footerView() string {
+func (a App) layoutWidth() int {
 	width := a.width
 	if width <= 0 {
 		width = 80
 	}
+	if a.compact {
+		width = min(width, compactMaxWidth)
+	}
+	return width
+}
+
+func (a App) listHeight() int {
+	height := a.height
+	if height <= 0 {
+		height = 24
+	}
+	listHeight := max(height-2, 5)
+	if a.compact {
+		listHeight = min(listHeight, compactMaxListHeight)
+	}
+	return listHeight
+}
+
+func (a App) detailHeight() int {
+	height := a.height
+	if height <= 0 {
+		height = 24
+	}
+	if a.compact {
+		height = min(height, compactMaxDetailHeight)
+	}
+	return height
+}
+
+func (a App) footerView() string {
+	width := a.layoutWidth()
 
 	status := a.footerStatus()
 	bindings := a.footerHelpBindings()
