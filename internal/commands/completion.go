@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// @lat: [[cli#Local operator workflows]]
 func newCompletionCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "completion [bash|zsh|fish|powershell]",

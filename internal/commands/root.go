@@ -23,6 +23,7 @@ var (
 )
 
 // NewRootCmd creates the root cobra command.
+// @lat: [[cli#Root behavior]]
 func NewRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "kagi",

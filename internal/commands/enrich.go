@@ -51,6 +51,7 @@ type enrichOutput struct {
 	Results []enrichResult `json:"results"`
 }
 
+// @lat: [[cli#Discovery feeds and enrichment]]
 func newEnrichCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "enrich",
@@ -64,6 +65,7 @@ func newEnrichCmd() *cobra.Command {
 	return cmd
 }
 
+// @lat: [[cli#Discovery feeds and enrichment]]
 func newEnrichSubCmd(index, endpoint, description string) *cobra.Command {
 	var (
 		limit       int
@@ -173,6 +175,7 @@ func renderEnrichOutput(out enrichOutput, showBalance bool) error {
 	return nil
 }
 
+// @lat: [[overview#Capability Families#API-key commands]]
 func fetchEnrich(client *http.Client, apiKey, endpoint, query string) (*enrichResponse, error) {
 	params := url.Values{}
 	params.Set("q", query)

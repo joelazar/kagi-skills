@@ -39,6 +39,7 @@ type translateOutput struct {
 	TargetLang  string `json:"target_lang"`
 }
 
+// @lat: [[cli#Synthesis and question answering]]
 func newTranslateCmd() *cobra.Command {
 	var (
 		sourceLang string
@@ -123,6 +124,7 @@ func renderTranslateOutput(out translateOutput) error {
 	return nil
 }
 
+// @lat: [[overview#Capability Families#Session-token commands]]
 func doTranslate(sessionToken, text, sourceLang, targetLang, formality string, timeout time.Duration) (translateOutput, error) {
 	client := api.NewHTTPClient(timeout)
 

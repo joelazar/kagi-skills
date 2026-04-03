@@ -111,6 +111,7 @@ type threadDetailMessage struct {
 	CreatedAt string `json:"created_at,omitempty"`
 }
 
+// @lat: [[cli#Synthesis and question answering]]
 func newAssistantCmd() *cobra.Command {
 	var (
 		threadID   string
@@ -165,6 +166,7 @@ Supports conversation threads via --thread flag.`,
 	return cmd
 }
 
+// @lat: [[overview#Capability Families#Session-token commands]]
 func newAssistantThreadCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "thread",
@@ -412,6 +414,7 @@ func parseStreamFrames(body string) map[string][]string {
 
 // --- Assistant API calls ---
 
+// @lat: [[overview#Capability Families#Session-token commands]]
 func callAssistantPrompt(client *http.Client, sessionToken, query, threadID string) (*assistantPromptResponse, error) {
 	query = strings.TrimSpace(query)
 	if query == "" {
@@ -541,6 +544,7 @@ func accumulateTokens(frames map[string][]string) string {
 	return token.Text
 }
 
+// @lat: [[overview#Capability Families#Session-token commands]]
 func listAssistantThreads(client *http.Client, sessionToken string) ([]threadSummary, error) {
 	payload := map[string]any{"limit": 100}
 
@@ -577,6 +581,7 @@ func parseAssistantThreadListStream(body string) ([]threadSummary, error) {
 	return threads, nil
 }
 
+// @lat: [[overview#Capability Families#Session-token commands]]
 func getAssistantThread(client *http.Client, sessionToken, threadID string) (*threadDetail, error) {
 	tid := strings.TrimSpace(threadID)
 	if tid == "" {
@@ -636,6 +641,7 @@ func parseAssistantThreadOpenStream(body, threadID string) (*threadDetail, error
 	return detail, nil
 }
 
+// @lat: [[overview#Capability Families#Session-token commands]]
 func deleteAssistantThread(client *http.Client, sessionToken string, thread *threadDetail) error {
 	payload := map[string]any{
 		"threads": []map[string]any{

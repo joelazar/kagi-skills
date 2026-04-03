@@ -26,6 +26,7 @@ const (
 )
 
 // NewExecutor creates a CommandExecutor backed by the current kagi CLI binary.
+// @lat: [[architecture#Interactive TUI reuse]]
 func NewExecutor(cfg *config.Config) CommandExecutor {
 	cliPath, cliErr := os.Executable()
 

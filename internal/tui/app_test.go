@@ -39,6 +39,7 @@ func mustApp(t *testing.T, m tea.Model) App {
 	return a
 }
 
+// @lat: [[testing#Interactive TUI state tests]]
 func TestInitialState(t *testing.T) {
 	app := newTestApp(nil)
 	if app.State() != StateMenu {

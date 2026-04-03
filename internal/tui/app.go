@@ -195,6 +195,7 @@ func Run(executor CommandExecutor) error {
 }
 
 // RunWithOptions starts the TUI application with explicit presentation options.
+// @lat: [[architecture#Interactive TUI reuse]]
 func RunWithOptions(executor CommandExecutor, opts RunOptions) error {
 	app := NewAppWithOptions(executor, opts)
 	app.menu = newMenuList(app.layoutWidth(), app.listHeight())

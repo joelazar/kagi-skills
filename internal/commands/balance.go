@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// @lat: [[cli#Local operator workflows]]
 func newBalanceCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "balance",

@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// @lat: [[cli#Local operator workflows]]
 func newVersionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",

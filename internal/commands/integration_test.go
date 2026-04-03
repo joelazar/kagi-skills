@@ -16,6 +16,7 @@ import (
 )
 
 // setupMockServer creates a mock Kagi API server that handles all endpoints.
+// @lat: [[testing#Integration tests]]
 func setupMockServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

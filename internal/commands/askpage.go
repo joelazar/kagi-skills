@@ -19,6 +19,7 @@ type askPageOutput struct {
 	References string `json:"references,omitempty"`
 }
 
+// @lat: [[cli#Synthesis and question answering]]
 func newAskPageCmd() *cobra.Command {
 	var timeoutSec int
 
@@ -74,6 +75,7 @@ The question is answered using the content of the provided URL as context.`,
 	return cmd
 }
 
+// @lat: [[overview#Capability Families#Session-token commands]]
 func renderAskPageOutput(out askPageOutput) error {
 	format := getFormat()
 

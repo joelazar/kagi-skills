@@ -78,6 +78,7 @@ var (
 	reTitle    = regexp.MustCompile(`(?is)<title[^>]*>(.*?)</title>`)
 )
 
+// @lat: [[cli#Search and retrieval]]
 func newSearchCmd() *cobra.Command {
 	var (
 		limit           int
@@ -171,6 +172,7 @@ func newSearchCmd() *cobra.Command {
 	return cmd
 }
 
+// @lat: [[cli#Search and retrieval]]
 func newContentCmd() *cobra.Command {
 	var (
 		timeoutSec int
@@ -280,6 +282,7 @@ func printRelatedSearches(terms []string) {
 	}
 }
 
+// @lat: [[overview#Capability Families#API-key commands]]
 func fetchSearch(client *http.Client, apiKey, query string, limit int) (*kagiSearchResponse, error) {
 	params := url.Values{}
 	params.Set("q", query)
@@ -305,6 +308,7 @@ func fetchSearch(client *http.Client, apiKey, query string, limit int) (*kagiSea
 	return &out, nil
 }
 
+// @lat: [[architecture#HTTP clients and safety boundaries]]
 func fetchPageContent(client *http.Client, targetURL string, maxChars int) (title string, content string, err error) {
 	parsedURL, err := api.ValidateRemoteFetchURL(targetURL)
 	if err != nil {

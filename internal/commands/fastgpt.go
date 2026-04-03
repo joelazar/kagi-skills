@@ -49,6 +49,7 @@ type fastGPTOutputJSON struct {
 	Meta       api.Meta    `json:"meta"`
 }
 
+// @lat: [[cli#Synthesis and question answering]]
 func newFastGPTCmd() *cobra.Command {
 	var (
 		noRefs      bool
@@ -134,6 +135,7 @@ func newFastGPTCmd() *cobra.Command {
 	return cmd
 }
 
+// @lat: [[overview#Capability Families#API-key commands]]
 func callFastGPT(client *http.Client, apiKey, query string, cache bool) (*fastGPTResponse, error) {
 	reqBody := fastGPTRequest{
 		Query:     query,

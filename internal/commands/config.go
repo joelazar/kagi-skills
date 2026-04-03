@@ -11,6 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// @lat: [[cli#Local operator workflows]]
 func newConfigCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
@@ -23,6 +24,7 @@ func newConfigCmd() *cobra.Command {
 	return cmd
 }
 
+// @lat: [[cli#Local operator workflows]]
 func newConfigInitCmd() *cobra.Command {
 	var force bool
 
@@ -44,6 +46,7 @@ Get your API key at: https://kagi.com/settings/api`,
 	return cmd
 }
 
+// @lat: [[cli#Local operator workflows]]
 func newConfigPathCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "path",
@@ -75,6 +78,7 @@ type searchConfig struct {
 	Region string `yaml:"region,omitempty"`
 }
 
+// @lat: [[cli#Local operator workflows]]
 func runConfigInit(force bool) error {
 	configDir, err := os.UserConfigDir()
 	if err != nil {

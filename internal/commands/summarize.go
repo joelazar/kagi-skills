@@ -60,6 +60,7 @@ var (
 	}
 )
 
+// @lat: [[cli#Synthesis and question answering]]
 func newSummarizeCmd() *cobra.Command {
 	var (
 		inputText   string
@@ -175,6 +176,7 @@ Supports multiple engines and summary types. Text can be provided with --text or
 	return cmd
 }
 
+// @lat: [[overview#Capability Families#API-key commands]]
 func callSummarizer(
 	client *http.Client,
 	apiKey, inputURL, inputText, engine, summType, targetLang string,

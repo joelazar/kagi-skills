@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+// @lat: [[testing#Package-level unit coverage]]
 func TestNewsFilterPresetsValid(t *testing.T) {
 	if len(NewsFilterPresets) == 0 {
 		t.Fatal("NewsFilterPresets is empty")

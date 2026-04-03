@@ -12,6 +12,7 @@ import (
 
 const authCheckSearchURL = "https://kagi.com/api/v0/search"
 
+// @lat: [[cli#Local operator workflows]]
 func newAuthCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "auth",
@@ -24,6 +25,7 @@ func newAuthCmd() *cobra.Command {
 	return cmd
 }
 
+// @lat: [[cli#Local operator workflows]]
 func newAuthCheckCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "check",
@@ -37,6 +39,7 @@ Also reports whether a Kagi session token is configured for subscriber features.
 	}
 }
 
+// @lat: [[overview#Capability Families#Feed and utility commands]]
 func runAuthCheck() error {
 	// Check API key
 	apiKey, err := api.ResolveAPIKey(cfg)

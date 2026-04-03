@@ -25,6 +25,7 @@ const (
 
 // NewHTTPClient creates an HTTP client with the given timeout, using the default
 // transport with HTTP/2 and proxy support.
+// @lat: [[architecture#HTTP clients and safety boundaries]]
 func NewHTTPClient(timeout time.Duration) *http.Client {
 	t, ok := http.DefaultTransport.(*http.Transport)
 	if !ok {

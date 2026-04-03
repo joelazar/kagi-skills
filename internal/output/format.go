@@ -31,6 +31,7 @@ func ValidFormats() []string {
 }
 
 // ParseFormat validates and returns a Format from a string.
+// @lat: [[architecture#Output contract]]
 func ParseFormat(s string) (Format, error) {
 	switch Format(s) {
 	case FormatJSON, FormatCompact, FormatPretty, FormatMarkdown, FormatCSV:

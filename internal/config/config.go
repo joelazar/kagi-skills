@@ -30,6 +30,7 @@ type SearchDefaults struct {
 // Load reads the configuration from the standard locations.
 // Priority: ./.kagi.yaml > ~/.config/kagi/config.yaml
 // Returns nil config (not an error) if no config file exists.
+// @lat: [[architecture#Configuration and credential precedence]]
 func Load() (*Config, error) {
 	// Try local config first
 	if cfg, err := loadFile(".kagi.yaml"); err == nil {

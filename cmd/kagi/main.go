@@ -11,6 +11,7 @@ import (
 	"github.com/joelazar/kagi/internal/version"
 )
 
+// @lat: [[architecture#Process entry and command assembly]]
 func main() {
 	rootCmd := commands.NewRootCmd()
 

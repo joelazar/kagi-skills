@@ -56,6 +56,7 @@ type smallWebOutput struct {
 	Count int            `json:"count"`
 }
 
+// @lat: [[cli#Discovery feeds and enrichment]]
 func newSmallWebCmd() *cobra.Command {
 	var (
 		limit      int
@@ -149,6 +150,7 @@ func renderSmallWebOutput(out smallWebOutput) error {
 	return nil
 }
 
+// @lat: [[overview#Capability Families#Feed and utility commands]]
 func fetchSmallWebFeed(client *http.Client, limit int) (*atomFeed, error) {
 	feedURL := smallWebFeedURL
 	if limit > 0 {

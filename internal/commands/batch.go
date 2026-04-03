@@ -29,6 +29,7 @@ type batchOutput struct {
 	Errors  int           `json:"errors"`
 }
 
+// @lat: [[cli#Search and retrieval]]
 func newBatchCmd() *cobra.Command {
 	var (
 		concurrency int
@@ -94,6 +95,7 @@ Queries can be provided as arguments or piped via stdin (one per line).`,
 	return cmd
 }
 
+// @lat: [[overview#Capability Families#API-key commands]]
 func runBatchSearches(queries []string, apiKey string, concurrency, limit, timeoutSec, rateLimitMs int) batchOutput {
 	results := make([]batchResult, len(queries))
 	sem := make(chan struct{}, concurrency)

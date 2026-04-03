@@ -37,6 +37,7 @@ type quickOutput struct {
 	References string `json:"references,omitempty"`
 }
 
+// @lat: [[cli#Synthesis and question answering]]
 func newQuickCmd() *cobra.Command {
 	var timeoutSec int
 
@@ -100,6 +101,7 @@ func renderQuickOutput(out quickOutput) error {
 	return nil
 }
 
+// @lat: [[overview#Capability Families#Session-token commands]]
 func fetchQuickAnswer(client *http.Client, sessionToken, query string) (quickOutput, error) {
 	params := url.Values{}
 	params.Set("q", query)

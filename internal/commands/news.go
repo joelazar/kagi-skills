@@ -68,6 +68,7 @@ type newsOutput struct {
 	Count    int              `json:"count"`
 }
 
+// @lat: [[cli#Discovery feeds and enrichment]]
 func newNewsCmd() *cobra.Command {
 	var (
 		category   string
@@ -154,6 +155,7 @@ func renderNewsOutput(out newsOutput) error {
 	return nil
 }
 
+// @lat: [[overview#Capability Families#Feed and utility commands]]
 func fetchNews(client *http.Client, category string, limit int, lang string) ([]newsOutputItem, error) {
 	if lang == "" {
 		lang = "en"

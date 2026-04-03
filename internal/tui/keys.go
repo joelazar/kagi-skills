@@ -21,6 +21,7 @@ type KeyMap struct {
 }
 
 // DefaultKeyMap returns the default keybindings with vim + arrow support.
+// @lat: [[cli#Interactive terminal mode#Keybindings]]
 func DefaultKeyMap() KeyMap {
 	return KeyMap{
 		Up: key.NewBinding(

@@ -49,6 +49,7 @@ func (d commandDelegate) Render(w io.Writer, m list.Model, index int, listItem l
 }
 
 // MenuCommands returns all available commands for the TUI menu.
+// @lat: [[cli#Interactive terminal mode]]
 func MenuCommands() []Command {
 	return []Command{
 		{

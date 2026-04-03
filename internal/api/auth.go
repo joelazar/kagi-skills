@@ -10,6 +10,7 @@ import (
 
 // ResolveAPIKey returns the Kagi API key from environment or config.
 // Priority: KAGI_API_KEY env var > config file api_key.
+// @lat: [[overview#Capability Families#API-key commands]]
 func ResolveAPIKey(cfg *config.Config) (string, error) {
 	if key := strings.TrimSpace(os.Getenv("KAGI_API_KEY")); key != "" {
 		return key, nil
@@ -24,6 +25,7 @@ func ResolveAPIKey(cfg *config.Config) (string, error) {
 
 // ResolveSessionToken returns the Kagi session token from environment or config.
 // Priority: KAGI_SESSION_TOKEN env var > config file session_token.
+// @lat: [[overview#Capability Families#Session-token commands]]
 func ResolveSessionToken(cfg *config.Config) (string, error) {
 	if token := strings.TrimSpace(os.Getenv("KAGI_SESSION_TOKEN")); token != "" {
 		return token, nil
